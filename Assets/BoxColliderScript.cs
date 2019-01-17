@@ -38,6 +38,10 @@ public class BoxColliderScript : MonoBehaviour {
     {
         // load a new scene
         Debug.Log("Mouse clicked " + this.name);
+        var marble = GameObject.Find("Marble");
+        GameObject newBox = Instantiate(marble);
+        newBox.transform.position = this.transform.position;
+        newBox.transform.AddPos(y: 1);
     }
 
 
