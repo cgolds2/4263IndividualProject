@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class BoxColliderScript : MonoBehaviour {
-
+    Material mat;
+    static bool red;
 	// Use this for initialization
 	void Start () {
 		
@@ -37,11 +38,11 @@ public class BoxColliderScript : MonoBehaviour {
     void OnMouseDown()
     {
         // load a new scene
-        Debug.Log("Mouse clicked " + this.name);
-        var marble = GameObject.Find("Marble");
-        GameObject newBox = Instantiate(marble);
-        newBox.transform.position = this.transform.position;
-        newBox.transform.AddPos(y: 1);
+        Debug.Log("Mouse clcked " + this.name);
+
+        GameMindScript.PlaceMarble(this.transform.position);
+
+    
     }
 
 
