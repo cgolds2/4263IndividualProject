@@ -18,7 +18,7 @@ public class GameMindScript : MonoBehaviour
     public static GameType typeOfGame;
     public static GameMove currentMove = null;
     public static GameObject lastMarble = null;
-    public static GameState nextState;
+    private static GameState nextState;
     /*
    * 00-11: horizontal
    * 12-23: verticle
@@ -29,7 +29,30 @@ public class GameMindScript : MonoBehaviour
     static System.Random r = new System.Random();
     static int startQuadrant = -1;
     static TileVals[,] gameBoard;
-    public static GameState stateOfGame = GameState.SecondPlayerTurn;
+    private static GameState stateOfGame = GameState.SecondPlayerTurn;
+    static GameWinner whoWon = 0;
+
+    public static void SetGameState(GameState s){
+        if(stateOfGame != GameState.Over){
+            stateOfGame = s;
+        }
+    }
+
+    public static GameState GetGameState(){
+        return stateOfGame;
+    }
+
+    public static void SetNextGameState(GameState s){
+        if (nextState != GameState.Over)
+        {
+            nextState = s;
+        }
+    }
+
+    public static GameState GetNextGameState()
+    {
+        return nextState;
+    }
 
     public enum GameState
     {
@@ -37,7 +60,8 @@ public class GameMindScript : MonoBehaviour
         PickingCoord,
         PickingRotation,
         Moving,
-        SecondPlayerTurn
+        SecondPlayerTurn,
+        Over
     }
 
     public enum GameType
@@ -45,6 +69,13 @@ public class GameMindScript : MonoBehaviour
         TwoPlayer,
         UseHeu,
         UseAI
+    }
+
+    public enum GameWinner{
+        FirstPlayer,
+        SecondPlayer,
+        AI,
+        CPU
     }
 
     // Use this for initialization
@@ -56,8 +87,10 @@ public class GameMindScript : MonoBehaviour
 
     public static void AdvanceGameState()
     {
-        switch (nextState)
+        switch (GetNextGameState())
         {
+            case GameState.Over:
+                break;
             case GameState.NotTurn:
                 break;
             case GameState.PickingCoord:
@@ -79,17 +112,19 @@ public class GameMindScript : MonoBehaviour
                         break;
                     default:
                         break;
+
                 }
-                break;
+                return;
 
             default:
                 break;
         }
-        stateOfGame = nextState;
+        SetGameState(GetNextGameState());
     }
 
     void RestartGame()
     {
+
         lastTurn = new int[85];
         lastMove = null;
         turns = new List<int[]>();
@@ -98,6 +133,9 @@ public class GameMindScript : MonoBehaviour
         r = new System.Random();
         startQuadrant = -1;
         gameBoard = new TileVals[6, 6];
+        stateOfGame = GameState.SecondPlayerTurn;
+        nextState = GameState.SecondPlayerTurn;
+
     }
 
     // Update is called once per frame
@@ -110,31 +148,69 @@ public class GameMindScript : MonoBehaviour
     public static void MovePlayer()
     {
         RotateSquareInUnity(currentMove.rotIndex, currentMove.rotLeft);
-        UpdateWinCondition(currentMove);
-
+        if(UpdateWinCondition(currentMove)){
+            EndGame();
+        }
+        
         currentMove = null;
+    }
+
+    public static void EndGame(){
+        // Make a background box
+        // Make the first button. If it is pressed, Application.Loadlevel (1) will be executed
+        SetNextGameState(GameState.Over);
+    }
+
+    void OnGUI()
+    {
+        if(GetGameState() == GameState.Over){
+
+            var buttonObject = new GameObject("Button");
+
+            if (GUI.Button(new Rect(Screen.width / 2 - 90, Screen.height / 2 - 80, 180, 60), whoWon.ToString() + " Won"))
+            {
+                GameMindScript.typeOfGame = GameMindScript.GameType.TwoPlayer;
+                UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
+                UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync("SampleScene");
+
+
+            }
+        }
+      
     }
 
     public static void MoveOther()
     {
         nextState = GameState.PickingCoord;
         GameMove g;
-        if (typeOfGame==GameType.UseAI)
-        {
-            g = NNTurn(gameBoard);
-        }
-        else if (typeOfGame==GameType.UseHeu)
-        {
-            g = PentagoHeuristic(gameBoard);
+
+        if(typeOfGame==GameType.TwoPlayer){
+            stateOfGame = GameState.PickingCoord;
         }else{
-            throw new Exception("Not a valid cpu option");
+            if (typeOfGame == GameType.UseAI)
+            {
+                g = NNTurn(gameBoard);
+            }
+            else if (typeOfGame == GameType.UseHeu)
+            {
+                g = PentagoHeuristic(gameBoard);
+            }
+            else
+            {
+                throw new Exception("Not a valid cpu option");
+            }
+
+
+
+            PlaceAndTurnInUnity(g);
+            if (UpdateWinCondition(g))
+            {
+                EndGame();
+            }
         }
 
 
-
-        PlaceAndTurnInUnity(g);
-
-        UpdateWinCondition(g);
+       
 
     }
 
@@ -229,10 +305,13 @@ public class GameMindScript : MonoBehaviour
             Console.Write("Game Over On Turn " + GetTurns().Count + ".\n");
             if (gameOver == 1)
             {
+                whoWon = GameWinner.FirstPlayer;
                 Console.Write("X Won");
             }
             else if (gameOver == 2)
             {
+                whoWon = GameWinner.SecondPlayer;
+
                 Console.Write("O Won");
             }
             else

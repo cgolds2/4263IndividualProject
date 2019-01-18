@@ -16,7 +16,7 @@ public class BoxColliderScript : MonoBehaviour {
 	}
     private void OnMouseEnter()
     {
-        if(GameMindScript.stateOfGame == GameMindScript.GameState.PickingCoord)
+        if(GameMindScript.GetGameState() == GameMindScript.GameState.PickingCoord)
         {
             //If your mouse hovers over the GameObject with the script attached, output this message
             Debug.Log("Mouse entered " + this.name);
@@ -37,7 +37,7 @@ public class BoxColliderScript : MonoBehaviour {
 
     void OnMouseExit()
     {
-        if (GameMindScript.stateOfGame == GameMindScript.GameState.PickingCoord)
+        if (GameMindScript.GetGameState() == GameMindScript.GameState.PickingCoord)
         {
             //The mouse is no longer hovering over the GameObject so output this message each frame
             Debug.Log("Mouse is no longer on " + this.name);
@@ -52,7 +52,7 @@ public class BoxColliderScript : MonoBehaviour {
 
     void OnMouseDown()
     {
-        if (GameMindScript.stateOfGame == GameMindScript.GameState.PickingCoord)
+        if (GameMindScript.GetGameState() == GameMindScript.GameState.PickingCoord)
         {
             // load a new scene
             Debug.Log("Mouse clcked " + this.name);
@@ -70,7 +70,7 @@ public class BoxColliderScript : MonoBehaviour {
             GameMindScript.currentMove.xCord = loc.Item1;
             GameMindScript.currentMove.yCord = loc.Item2;
 
-            GameMindScript.stateOfGame = GameMindScript.GameState.PickingRotation;
+            GameMindScript.SetGameState(GameMindScript.GameState.PickingRotation);
     
         }
 
