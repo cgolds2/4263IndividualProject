@@ -15,9 +15,7 @@ public class GameMindScript : MonoBehaviour
     static List<int[]> turns = new List<int[]>();
     static bool isXTurn = false;
     static int gameCounter = -1;
-    static bool useHeu;
-    static bool useNN;
-    static bool useSecondPlayer;
+    public static GameType typeOfGame;
     public static GameMove currentMove = null;
     public static GameObject lastMarble = null;
     public static GameState nextState;
@@ -42,6 +40,13 @@ public class GameMindScript : MonoBehaviour
         SecondPlayerTurn
     }
 
+    public enum GameType
+    {
+        TwoPlayer,
+        UseHeu,
+        UseAI
+    }
+
     // Use this for initialization
     void Start()
     {
@@ -62,17 +67,21 @@ public class GameMindScript : MonoBehaviour
             case GameState.Moving:
                 break;
             case GameState.SecondPlayerTurn:
-                if (useSecondPlayer)
+                switch (typeOfGame)
                 {
-                    stateOfGame = GameState.PickingCoord;
-                }
-                else
-                {
-                    stateOfGame = GameState.NotTurn;
-                    MoveOther();
-                    
+                    case GameType.TwoPlayer:
+                        stateOfGame = GameState.PickingCoord;
+                        break;
+                    case GameType.UseHeu:
+                    case GameType.UseAI:
+                        stateOfGame = GameState.NotTurn;
+                        MoveOther();
+                        break;
+                    default:
+                        break;
                 }
                 break;
+
             default:
                 break;
         }
@@ -81,7 +90,6 @@ public class GameMindScript : MonoBehaviour
 
     void RestartGame()
     {
-        useHeu = true;
         lastTurn = new int[85];
         lastMove = null;
         turns = new List<int[]>();
@@ -111,11 +119,11 @@ public class GameMindScript : MonoBehaviour
     {
         nextState = GameState.PickingCoord;
         GameMove g;
-        if (useNN)
+        if (typeOfGame==GameType.UseAI)
         {
             g = NNTurn(gameBoard);
         }
-        else if (useHeu)
+        else if (typeOfGame==GameType.UseHeu)
         {
             g = PentagoHeuristic(gameBoard);
         }else{
