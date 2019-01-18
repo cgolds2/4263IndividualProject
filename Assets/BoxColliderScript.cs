@@ -40,11 +40,18 @@ public class BoxColliderScript : MonoBehaviour {
         // load a new scene
         Debug.Log("Mouse clcked " + this.name);
 
-        GameMindScript.PlaceMarble(this.transform.position);
+        var marble = GameMindScript.PlaceMarble(this.transform.position);
 
         int index = int.Parse(this.name.Substring(12, 2));
         var loc = GameMindScript.ArrayLocationFromIndex(index);
-        GameMove g = new GameMove(loc.Item1,loc.Item2,0,false);
+
+        int rotIndex = 0;
+        var brObject = GameObject.Find("BR0" + rotIndex);
+       var ScriptThatYouWant = brObject.GetComponent <BoardQuadScript> ();
+        ScriptThatYouWant.marbles.Add(marble.transform.gameObject);
+        ScriptThatYouWant.Rotate(false);
+        GameMove g = new GameMove(loc.Item1,loc.Item2,rotIndex,false);
+
         GameMindScript.MoveOther();
 
         var o = GameObject.Find("BR_TL");

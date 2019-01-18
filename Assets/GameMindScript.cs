@@ -113,7 +113,7 @@ public class GameMindScript : MonoBehaviour
     }
 
 
-    public static void PlaceMarble(Vector3 place){
+    public static GameObject PlaceMarble(Vector3 place){
       
         var mat = Resources.Load("RedMarble");
         var marble = GameObject.Find("Marble");
@@ -123,6 +123,7 @@ public class GameMindScript : MonoBehaviour
         isXTurn = !isXTurn;
         marbleToPlace.transform.position = place;
         marbleToPlace.transform.AddPos(y: 1);
+        return marbleToPlace;
     }
 
 
