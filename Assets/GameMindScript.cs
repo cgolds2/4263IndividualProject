@@ -26,7 +26,7 @@ public class GameMindScript : MonoBehaviour
     static int[] winValues = new int[32];
     static System.Random r = new System.Random();
     static int startQuadrant = -1;
-    TileVals[,] gameBoard;
+    static TileVals[,] gameBoard;
 
 
     // Use this for initialization
@@ -60,7 +60,7 @@ public class GameMindScript : MonoBehaviour
         UpdateWinCondition(g);
     }
 
-    public void MoveOther()
+    public static void MoveOther()
     {
         GameMove g;
         if (useNN)
@@ -81,9 +81,17 @@ public class GameMindScript : MonoBehaviour
 
     }
 
-    public static int IndexFrom2DArray(int x, int y)
+    public static int IndexFromArray(int x, int y)
     {
         return y * 6 + x;
+    }
+
+    public static MyTuple<int,int> ArrayLocationFromIndex(int index){
+
+        return new MyTuple<int, int>(index / 6, index % 6);
+      
+
+
     }
 
     public static void RotateSquareInUnity(int index)
@@ -93,7 +101,7 @@ public class GameMindScript : MonoBehaviour
 
     public static void PlaceAndTurnInUnity(GameMove g)
     {
-        int indexToPlace = IndexFrom2DArray(g.xCord, g.yCord);
+        int indexToPlace = IndexFromArray(g.xCord, g.yCord);
 
         String objectName = String.Format("BallCollider{0:00}", indexToPlace);
         var placeToPut = GameObject.Find(objectName);
@@ -104,6 +112,7 @@ public class GameMindScript : MonoBehaviour
 
     }
 
+
     public static void PlaceMarble(Vector3 place){
       
         var mat = Resources.Load("RedMarble");
@@ -111,7 +120,7 @@ public class GameMindScript : MonoBehaviour
 
         GameObject marbleToPlace = Instantiate(marble);
         marbleToPlace.GetComponent<Renderer>().material.color = isXTurn ? Color.red : Color.black;
-
+        isXTurn = !isXTurn;
         marbleToPlace.transform.position = place;
         marbleToPlace.transform.AddPos(y: 1);
     }
@@ -123,11 +132,10 @@ public class GameMindScript : MonoBehaviour
     /// </summary>
     /// <returns><c>true</c>, if game is over, <c>false</c> otherwise.</returns>
     /// <param name="g">The move to mark down.</param>
-    public bool UpdateWinCondition(GameMove g)
+    public static bool UpdateWinCondition(GameMove g)
     {
 
         //change turn
-        isXTurn = !isXTurn;
         lastMove = g;
 
 

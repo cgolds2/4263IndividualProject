@@ -42,10 +42,13 @@ public class BoxColliderScript : MonoBehaviour {
 
         GameMindScript.PlaceMarble(this.transform.position);
 
-    
+        int index = int.Parse(this.name.Substring(12, 2));
+        var loc = GameMindScript.ArrayLocationFromIndex(index);
+        GameMove g = new GameMove(loc.Item1,loc.Item2,0,false);
+        GameMindScript.MoveOther();
+
+        var o = GameObject.Find("BR_TL");
     }
-
-
 
 }
 
