@@ -601,7 +601,7 @@ Prefab:
     m_Modifications:
     - target: {fileID: 4705648661173704, guid: d789fd259add549fd922a4a3c80887cf, type: 2}
       propertyPath: m_LocalPosition.x
-      value: -2.006
+      value: -8.44
       objectReference: {fileID: 0}
     - target: {fileID: 4705648661173704, guid: d789fd259add549fd922a4a3c80887cf, type: 2}
       propertyPath: m_LocalPosition.y
@@ -2760,7 +2760,7 @@ Prefab:
       objectReference: {fileID: 0}
     - target: {fileID: 1239808730613176, guid: fe821feb519bd4211a66bc67be846d01, type: 2}
       propertyPath: m_Name
-      value: BallCollider07
+      value: BallCollider06
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: fe821feb519bd4211a66bc67be846d01, type: 2}
@@ -3254,6 +3254,34 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 22
   m_LocalEulerAnglesHint: {x: 0, y: 178.289, z: 0}
+--- !u!1 &979847301
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 979847302}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &979847302
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 979847301}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0.2, y: 0, z: 0.15}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 1113161294}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &981654542
 GameObject:
   m_ObjectHideFlags: 0
