@@ -35,6 +35,8 @@ public class BoardQuadScript : MonoBehaviour
             {
                 transform.rotation = new Quaternion(-0.5f,0.5f,0.5f,0.5f);
                 isRotating = false;
+                //maybe change game state here?
+                GameMindScript.AdvanceGameState();
             }
         }
     }

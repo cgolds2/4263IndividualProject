@@ -17,6 +17,10 @@ public class GameMindScript : MonoBehaviour
     static int gameCounter = -1;
     static bool useHeu;
     static bool useNN;
+    static bool useSecondPlayer;
+    public static GameMove currentMove = null;
+    public static GameObject lastMarble = null;
+    public static GameState nextState;
     /*
    * 00-11: horizontal
    * 12-23: verticle
@@ -27,12 +31,52 @@ public class GameMindScript : MonoBehaviour
     static System.Random r = new System.Random();
     static int startQuadrant = -1;
     static TileVals[,] gameBoard;
+    public static GameState stateOfGame = GameState.SecondPlayerTurn;
 
+    public enum GameState
+    {
+        NotTurn,
+        PickingCoord,
+        PickingRotation,
+        Moving,
+        SecondPlayerTurn
+    }
 
     // Use this for initialization
     void Start()
     {
         RestartGame();
+        MoveOther();
+    }
+
+    public static void AdvanceGameState()
+    {
+        switch (nextState)
+        {
+            case GameState.NotTurn:
+                break;
+            case GameState.PickingCoord:
+                break;
+            case GameState.PickingRotation:
+                break;
+            case GameState.Moving:
+                break;
+            case GameState.SecondPlayerTurn:
+                if (useSecondPlayer)
+                {
+                    stateOfGame = GameState.PickingCoord;
+                }
+                else
+                {
+                    stateOfGame = GameState.NotTurn;
+                    MoveOther();
+                    
+                }
+                break;
+            default:
+                break;
+        }
+        stateOfGame = nextState;
     }
 
     void RestartGame()
@@ -55,13 +99,17 @@ public class GameMindScript : MonoBehaviour
 
     }
 
-    public void MovePlayer(GameMove g)
+    public static void MovePlayer()
     {
-        UpdateWinCondition(g);
+        RotateSquareInUnity(currentMove.rotIndex, currentMove.rotLeft);
+        UpdateWinCondition(currentMove);
+
+        currentMove = null;
     }
 
     public static void MoveOther()
     {
+        nextState = GameState.PickingCoord;
         GameMove g;
         if (useNN)
         {
@@ -77,6 +125,7 @@ public class GameMindScript : MonoBehaviour
 
 
         PlaceAndTurnInUnity(g);
+
         UpdateWinCondition(g);
 
     }
@@ -88,27 +137,40 @@ public class GameMindScript : MonoBehaviour
 
     public static MyTuple<int,int> ArrayLocationFromIndex(int index){
 
-        return new MyTuple<int, int>(index / 6, index % 6);
+        return new MyTuple<int, int>(index % 6, index / 6);
       
 
 
     }
 
-    public static void RotateSquareInUnity(int index)
+    public static void RotateSquareInUnity(int index, bool rotLeft)
     {
+        var mQuad = GameObject.Find("BR0" + GameMindScript.GetQuadFromPoint(GameMindScript.currentMove.xCord,GameMindScript.currentMove.yCord));
+        var ScriptThatYouWantM = mQuad.GetComponent<BoardQuadScript>();
+        ScriptThatYouWantM.marbles.Add(lastMarble);
+
+
+        var rotator = GameObject.Find("BR0"+index);
+        var ScriptThatYouWant = rotator.GetComponent<BoardQuadScript>();
+        ScriptThatYouWant.Rotate(rotLeft);
 
     }
 
     public static void PlaceAndTurnInUnity(GameMove g)
     {
+        currentMove = g;
+
         int indexToPlace = IndexFromArray(g.xCord, g.yCord);
 
         String objectName = String.Format("BallCollider{0:00}", indexToPlace);
         var placeToPut = GameObject.Find(objectName);
 
 
-        PlaceMarble(placeToPut.transform.position);
-        RotateSquareInUnity(g.rotIndex);
+        var mar = PlaceMarble(placeToPut.transform.position);
+
+        GameMindScript.lastMarble = mar;
+
+        RotateSquareInUnity(g.rotIndex,g.rotLeft);
 
     }
 
@@ -123,6 +185,7 @@ public class GameMindScript : MonoBehaviour
         isXTurn = !isXTurn;
         marbleToPlace.transform.position = place;
         marbleToPlace.transform.AddPos(y: 1);
+
         return marbleToPlace;
     }
 
@@ -527,7 +590,7 @@ public class GameMindScript : MonoBehaviour
 
     }
 
-    static int GetQuadFromPoint(int x, int y)
+    public static int GetQuadFromPoint(int x, int y)
     {
         if (x <= 2 && y <= 2)
         {
@@ -821,7 +884,8 @@ public class GameMindScript : MonoBehaviour
         //first turn
         if (turnCounter == 1)
         {
-            startQuadrant = r.Next(4);
+            //startQuadrant = r.Next(4);
+            startQuadrant = 1;
             if (startQuadrant == 0)
             {
                 /*
