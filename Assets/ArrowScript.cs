@@ -22,7 +22,7 @@ public class ArrowScript : MonoBehaviour {
         if(GameMindScript.GetGameState() == GameMindScript.GameState.PickingRotation)
         {
             //If your mouse hovers over the GameObject with the script attached, output this message
-            Debug.Log("Mouse entered " + this.name);
+            //Debug.Log("Mouse entered " + this.name);
             var cursorObj = GameObject.Find("CursorObject");
             cursorObj.GetComponent<Renderer>().enabled = true;
 
@@ -59,7 +59,7 @@ public class ArrowScript : MonoBehaviour {
             GameMindScript.SetGameState(GameMindScript.GameState.NotTurn);
 
             // load a new scene
-            Debug.Log("Mouse clcked " + this.name);
+            //Debug.Log("Mouse clcked " + this.name);
 
 
         int index = int.Parse(this.name.Substring(15, 1));

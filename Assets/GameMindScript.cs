@@ -15,7 +15,7 @@ public class GameMindScript : MonoBehaviour
     static List<int[]> turns = new List<int[]>();
     static bool isXTurn = false;
     static int gameCounter = -1;
-    public static GameType typeOfGame;
+    public static GameType typeOfGame = GameType.UseHeu;
     public static GameMove currentMove = null;
     public static GameObject lastMarble = null;
     private static GameState nextState;

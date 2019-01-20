@@ -19,7 +19,7 @@ public class BoxColliderScript : MonoBehaviour {
         if(GameMindScript.GetGameState() == GameMindScript.GameState.PickingCoord)
         {
             //If your mouse hovers over the GameObject with the script attached, output this message
-            Debug.Log("Mouse entered " + this.name);
+            //Debug.Log("Mouse entered " + this.name);
             var cursorObj = GameObject.Find("CursorObject");
             cursorObj.GetComponent<Renderer>().enabled = true;
 
@@ -40,7 +40,7 @@ public class BoxColliderScript : MonoBehaviour {
         if (GameMindScript.GetGameState() == GameMindScript.GameState.PickingCoord)
         {
             //The mouse is no longer hovering over the GameObject so output this message each frame
-            Debug.Log("Mouse is no longer on " + this.name);
+            //Debug.Log("Mouse is no longer on " + this.name);
             var cursorObj = GameObject.Find("CursorObject");
 
 
@@ -55,7 +55,7 @@ public class BoxColliderScript : MonoBehaviour {
         if (GameMindScript.GetGameState() == GameMindScript.GameState.PickingCoord)
         {
             // load a new scene
-            Debug.Log("Mouse clcked " + this.name);
+            //Debug.Log("Mouse clcked " + this.name);
 
             var marble = GameMindScript.PlaceMarble(this.transform.position);
 
