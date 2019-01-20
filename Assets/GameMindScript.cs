@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.ComponentModel;
 using System.Text.RegularExpressions;
+using UnityEngine.UI;
 
 public class GameMindScript : MonoBehaviour
 {
@@ -15,7 +16,7 @@ public class GameMindScript : MonoBehaviour
     static List<int[]> turns = new List<int[]>();
     static bool isXTurn = false;
     static int gameCounter = -1;
-    public static GameType typeOfGame = GameType.UseHeu;
+    private static GameType typeOfGame = GameType.UseHeu;
     public static GameMove currentMove = null;
     public static GameObject lastMarble = null;
     private static GameState nextState;
@@ -29,11 +30,37 @@ public class GameMindScript : MonoBehaviour
     static System.Random r = new System.Random();
     static int startQuadrant = -1;
     static TileVals[,] gameBoard;
-    private static GameState stateOfGame = GameState.SecondPlayerTurn;
+    private static GameState stateOfGame = GameState.NotTurn;
     static GameWinner whoWon = 0;
 
     public static void SetGameState(GameState s){
-        if(stateOfGame != GameState.Over){
+        if(GetGameState() != GameState.Over){
+            if (GetGameType() != GameType.TwoPlayer && s == GameState.NotTurn)
+            {
+                SetMenuText("Computer Turn", false);
+
+            }
+            else
+            {
+                switch (s)
+                {
+                    case GameState.NotTurn:
+                        break;
+                    case GameState.SecondPlayerTurn:
+                    case GameState.PickingCoord:
+                        SetMenuText("Picking Coord", false);
+                        break;
+                    case GameState.PickingRotation:
+                        SetMenuText("Picking Rotation", false);
+                        break;
+                    case GameState.Moving:
+                        break;                       
+                    case GameState.Over:
+                        SetMenuText("Game Over", true);
+                        break;
+                }
+            }
+          
             stateOfGame = s;
         }
     }
@@ -85,6 +112,16 @@ public class GameMindScript : MonoBehaviour
         MoveOther();
     }
 
+    public static void SetGameType(GameType g)
+    {
+        typeOfGame = g;
+    }
+
+    public static GameType GetGameType()
+    {
+        return typeOfGame;
+    }
+
     public static void AdvanceGameState()
     {
         switch (GetNextGameState())
@@ -100,14 +137,15 @@ public class GameMindScript : MonoBehaviour
             case GameState.Moving:
                 break;
             case GameState.SecondPlayerTurn:
+               
                 switch (typeOfGame)
                 {
                     case GameType.TwoPlayer:
-                        stateOfGame = GameState.PickingCoord;
+                        SetGameState(GameState.PickingCoord);
                         break;
                     case GameType.UseHeu:
                     case GameType.UseAI:
-                        stateOfGame = GameState.NotTurn;
+                        SetGameState(GameState.NotTurn);
                         MoveOther();
                         break;
                     default:
@@ -124,6 +162,19 @@ public class GameMindScript : MonoBehaviour
 
     void RestartGame()
     {
+        GameType s = GetGameType();
+        switch (s)
+        {
+            case GameType.TwoPlayer:
+                SetTitleText("Pentago\nTwo Player");
+                break;
+            case GameType.UseHeu:
+                SetTitleText("Pentago\nVs Heuristic");
+                break;
+            case GameType.UseAI:
+                SetTitleText("Pentago\nVs Neural Net");
+                break;
+        }
 
         lastTurn = new int[85];
         lastMove = null;
@@ -133,8 +184,10 @@ public class GameMindScript : MonoBehaviour
         r = new System.Random();
         startQuadrant = -1;
         gameBoard = new TileVals[6, 6];
-        stateOfGame = GameState.SecondPlayerTurn;
-        nextState = GameState.SecondPlayerTurn;
+        //needs to be direct
+        stateOfGame = GameState.NotTurn;
+        SetGameState(GameState.NotTurn);
+        SetNextGameState(GameState.NotTurn);
 
     }
 
@@ -181,11 +234,12 @@ public class GameMindScript : MonoBehaviour
 
     public static void MoveOther()
     {
+
         nextState = GameState.PickingCoord;
         GameMove g;
 
         if(typeOfGame==GameType.TwoPlayer){
-            stateOfGame = GameState.PickingCoord;
+            SetGameState(GameState.PickingCoord);
         }else{
             if (typeOfGame == GameType.UseAI)
             {
@@ -257,7 +311,35 @@ public class GameMindScript : MonoBehaviour
         RotateSquareInUnity(g.rotIndex,g.rotLeft);
 
     }
+    
 
+     public static void SetTitleText(string s)
+    {
+        var mQuad = GameObject.Find("TextTitle");
+
+        GameMindScript.GetGameType();
+        var t = mQuad.GetComponent<Text>();
+        t.text =s + "\n-----------";
+    }
+
+
+    public static void SetMenuText(string s, bool ended)
+    {
+        var mQuad = GameObject.Find("TextMenu");
+
+        GameMindScript.GetGameType();
+        var t = mQuad.GetComponent<Text>();
+        if (ended)
+        {
+            t.text = "Turn #" + (GetTurns().Count ) + "\n" + s + "\n" + (!isXTurn ? "(Red)" : "(Black)");
+
+        }
+        else
+        {
+            t.text = "Turn #" + (GetTurns().Count + 1) + "\n" + s + "\n" + (isXTurn ? "(Red)" : "(Black)");
+
+        }
+    }
 
     public static GameObject PlaceMarble(Vector3 place){
       
@@ -266,7 +348,6 @@ public class GameMindScript : MonoBehaviour
 
         GameObject marbleToPlace = Instantiate(marble);
         marbleToPlace.GetComponent<Renderer>().material.color = isXTurn ? Color.red : Color.black;
-        isXTurn = !isXTurn;
         marbleToPlace.transform.position = place;
         marbleToPlace.transform.AddPos(y: 1);
 
@@ -282,7 +363,7 @@ public class GameMindScript : MonoBehaviour
     /// <param name="g">The move to mark down.</param>
     public static bool UpdateWinCondition(GameMove g)
     {
-
+        isXTurn = !isXTurn;
         //change turn
         lastMove = g;
 

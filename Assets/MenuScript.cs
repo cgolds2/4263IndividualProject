@@ -20,7 +20,7 @@ public class MenuScript : MonoBehaviour {
         // Make the first button. If it is pressed, Application.Loadlevel (1) will be executed
         if (GUI.Button(new Rect(Screen.width / 2 - 90, Screen.height / 2 - 80, 180, 60), "Play VS 2nd Player"))
         {
-            GameMindScript.typeOfGame = GameMindScript.GameType.TwoPlayer;
+            GameMindScript.SetGameType(GameMindScript.GameType.TwoPlayer);
             UnityEngine.SceneManagement.SceneManager.LoadScene("SampleScene");
 
         }
@@ -28,7 +28,7 @@ public class MenuScript : MonoBehaviour {
         // Make the second button.
         if (GUI.Button(new Rect(Screen.width / 2 - 90, Screen.height / 2 - 0, 180, 60), "Play VS Heuristic"))
         {
-            GameMindScript.typeOfGame = GameMindScript.GameType.UseHeu;
+            GameMindScript.SetGameType(GameMindScript.GameType.UseHeu);
             UnityEngine.SceneManagement.SceneManager.LoadScene("SampleScene");
 
         }
@@ -36,7 +36,7 @@ public class MenuScript : MonoBehaviour {
         // Make the second button.
         if (GUI.Button(new Rect(Screen.width / 2 - 90, Screen.height / 2 + 80, 180, 60), "Play VS AI"))
         {
-            GameMindScript.typeOfGame = GameMindScript.GameType.UseAI;
+            GameMindScript.SetGameType(GameMindScript.GameType.UseAI);
             UnityEngine.SceneManagement.SceneManager.LoadScene("SampleScene");
 
         }
