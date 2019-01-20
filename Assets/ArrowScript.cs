@@ -19,10 +19,10 @@ public class ArrowScript : MonoBehaviour {
     }
     private void OnMouseEnter()
     {
-        if(GameMindScript.stateOfGame == GameMindScript.GameState.PickingRotation)
+        if(GameMindScript.GetGameState() == GameMindScript.GameState.PickingRotation)
         {
             //If your mouse hovers over the GameObject with the script attached, output this message
-            Debug.Log("Mouse entered " + this.name);
+            //Debug.Log("Mouse entered " + this.name);
             var cursorObj = GameObject.Find("CursorObject");
             cursorObj.GetComponent<Renderer>().enabled = true;
 
@@ -41,7 +41,7 @@ public class ArrowScript : MonoBehaviour {
 
     void OnMouseExit()
     {
-        if (GameMindScript.stateOfGame == GameMindScript.GameState.PickingRotation)
+        if (GameMindScript.GetGameState() == GameMindScript.GameState.PickingRotation)
         {
  //The mouse is no longer hovering over the GameObject so output this message each frame
             Debug.Log("Mouse is no longer on " + this.name);
@@ -54,12 +54,12 @@ public class ArrowScript : MonoBehaviour {
 
     void OnMouseDown()
     {
-        if (GameMindScript.stateOfGame == GameMindScript.GameState.PickingRotation)
+        if (GameMindScript.GetGameState() == GameMindScript.GameState.PickingRotation)
         {
-            GameMindScript.stateOfGame = GameMindScript.GameState.NotTurn;
+            GameMindScript.SetGameState(GameMindScript.GameState.NotTurn);
 
             // load a new scene
-            Debug.Log("Mouse clcked " + this.name);
+            //Debug.Log("Mouse clcked " + this.name);
 
 
         int index = int.Parse(this.name.Substring(15, 1));
@@ -74,8 +74,8 @@ public class ArrowScript : MonoBehaviour {
             GameMindScript.currentMove.rotIndex = rotIndex;
             GameMindScript.currentMove.rotLeft = (left==0);
             GameMindScript.MovePlayer();
-            GameMindScript.stateOfGame = GameMindScript.GameState.Moving;
-            GameMindScript.nextState = GameMindScript.GameState.SecondPlayerTurn;
+            GameMindScript.SetGameState(GameMindScript.GameState.Moving);
+            GameMindScript.SetNextGameState(GameMindScript.GameState.SecondPlayerTurn);
         }
            
     }
