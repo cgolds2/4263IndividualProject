@@ -30,7 +30,7 @@ public class GameMindScript : MonoBehaviour
     private static GameState stateOfGame = GameState.NotTurn;
     static GameWinner whoWon = 0;
 
-    public class GameData
+    public class GameData : ICloneable
     {
         public TileVals[,] gameBoard;
         public int[] winValues = new int[32];
@@ -42,7 +42,21 @@ public class GameMindScript : MonoBehaviour
             isGameOver = false;
         }
 
+        public GameData(TileVals[,] gameBoard, int[] winValues, bool isGameOver)
+        {
+            this.gameBoard = gameBoard;
+            this.winValues = winValues;
+            this.isGameOver = isGameOver;
+        }
+
+
+        public object Clone()
+        {
+            return new GameData((TileVals[,])this.gameBoard.Clone(), (int[]) this.winValues.Clone(), this.isGameOver);
+        }
     }
+
+    
 
     public static void SetGameState(GameState s)
     {
@@ -1115,6 +1129,7 @@ public class GameMindScript : MonoBehaviour
     /// <returns>The optimal move</returns>
     static GameMove GetFromLookaheadCPU(GameData d)
     {
+        d = (GameData) d.Clone();
         List<LookaheadHelper> possibleMoves = new List<LookaheadHelper>();
         LookaheadHelper bestMove = new LookaheadHelper(-1, -1, null); ;
         for (int i = 0; i < 6; i++)
@@ -1158,6 +1173,7 @@ public class GameMindScript : MonoBehaviour
     //gets the best move that the player could do with no lookahead
     static LookaheadHelper GetLookaheadPlayer(GameData d, GameMove g)
     {
+        d = (GameData) d.Clone();
         UpdateWinCondition(g, ref d);
 
         LookaheadHelper best = new LookaheadHelper(-1, -1, null);
@@ -1194,6 +1210,8 @@ public class GameMindScript : MonoBehaviour
     /// <returns></returns>
     static int BestXFromWinConditions(GameData d, GameMove g)
     {
+        d = (GameData)d.Clone();
+
         UpdateWinCondition(g, ref d);
 
         //x is 1s
@@ -1217,6 +1235,8 @@ public class GameMindScript : MonoBehaviour
     }
     static int BestOFromWinConditions(GameData d, GameMove g)
     {
+        d = (GameData)d.Clone();
+
         UpdateWinCondition(g, ref d);
 
         //x is 1s
@@ -1250,6 +1270,8 @@ public class GameMindScript : MonoBehaviour
 
     static GameMove PentagoHeuristic(GameData d)
     {
+        d = (GameData)d.Clone();
+
 
         for (int i = 0; i < d.winValues.Length; i++)
         {
@@ -1700,122 +1722,126 @@ public class GameMindScript : MonoBehaviour
         }
         else
         {
-
-
-
-
-            int[,] zerothQuad = { { 2, 0 }, { 2, 1 }, { 2, 2 }, { 1, 2 }, { 0, 2 } };
-            int zerothInt = GetSumFromPoints(d.gameBoard, zerothQuad);
-            int[,] firstQuad = { { 3, 0 }, { 3, 1 }, { 3, 2 }, { 4, 2 }, { 5, 2 } };
-            int firstInt = GetSumFromPoints(d.gameBoard, firstQuad);
-            int[,] secondQuad = { { 0, 3 }, { 1, 3 }, { 2, 3 }, { 2, 4 }, { 2, 5 } };
-            int secondInt = GetSumFromPoints(d.gameBoard, secondQuad);
-            int[,] thirdQuad = { { 5, 5 }, { 4, 5 }, { 3, 5 }, { 3, 4 }, { 3, 3 } };
-            int thirdInt = GetSumFromPoints(d.gameBoard, thirdQuad);
-            if (turnCounter < 11)
-            {
-
-                List<TupleList<int, int>> possibleWinPoints = new List<TupleList<int, int>>();
-                for (int i = 0; i < d.winValues.Length; i++)
-                {
-                    if ((d.winValues[i] > 1 && d.winValues[i] < 5) || (d.winValues[i] > 11 && d.winValues[i] < 15))
-                    {
-                        possibleWinPoints.Add(PointsFromWinCondition(i));
-
-                    }
-                }
-                foreach (var pointArr in possibleWinPoints)
-                {
-                    foreach (var point in pointArr)
-                    {
-                        if (d.gameBoard[point.Item1, point.Item2] != TileVals.Blank)
-                        {
-                            continue;
-                        }
-                        if (
-                            ((-1 < point.Item1 && point.Item1 < 3) && (-1 < point.Item2 && point.Item2 < 3))
-                         || ((2 < point.Item1 && point.Item1 < 6) && (2 < point.Item2 && point.Item2 < 6)))
-                        {
-                            if (firstInt < secondInt)
-                            {
-                                ret = new GameMove(point.Item1, point.Item2, 1, false);
-                            }
-                            else
-                            {
-                                ret = new GameMove(point.Item1, point.Item2, 2, false);
-                            }
-                        }
-                        else if (
-                               ((2 < point.Item1 && point.Item1 < 6) && (-1 < point.Item2 && point.Item2 < 3))
-                            || ((-1 < point.Item1 && point.Item1 < 3) && (2 < point.Item2 && point.Item2 < 6)))
-                        {
-                            if (zerothInt < thirdInt)
-                            {
-                                ret = new GameMove(point.Item1, point.Item2, 0, false);
-                            }
-                            else
-                            {
-                                ret = new GameMove(point.Item1, point.Item2, 3, false);
-                            }
-                        }
-                    }
-                }
-
-            }
-            //LATE GAME
-            else
-            {
-                List<TupleList<int, int>> possibleWinPoints = new List<TupleList<int, int>>();
-                for (int i = 0; i < d.winValues.Length; i++)
-                {
-                    if (d.winValues[i] >= 23)
-                    {
-                        possibleWinPoints.Add(PointsFromWinCondition(i));
-                    }
-                }
-                //for each possible win condition
-                foreach (var pointArr in possibleWinPoints)
-                {
-                    foreach (var point in pointArr)
-                    {
-
-                        if (
-                               ((-1 < point.Item1 && point.Item1 < 3) && (-1 < point.Item2 && point.Item2 < 3))
-                            || ((2 < point.Item1 && point.Item1 < 6) && (2 < point.Item2 && point.Item2 < 6))
-                            )
-                        {
-                            if (firstInt > secondInt)
-                            {
-                                ret = new GameMove(point.Item1, point.Item2, 1, true);
-                            }
-                            else
-                            {
-                                ret = new GameMove(point.Item1, point.Item2, 2, false);
-                            }
-                        }
-                        else if (
-                               ((2 < point.Item1 && point.Item1 < 6) && (-1 < point.Item2 && point.Item2 < 3))
-                            || ((-1 < point.Item1 && point.Item1 < 3) && (2 < point.Item2 && point.Item2 < 6)))
-                        {
-
-                            if (zerothInt > thirdInt)
-                            {
-                                ret = new GameMove(point.Item1, point.Item2, 0, false);
-                            }
-                            else
-                            {
-                                ret = new GameMove(point.Item1, point.Item2, 3, false);
-                            }
-                        }
-                    }
-                }
-            }
-            if (ret.rotIndex == -1)
-            {
-                throw new Exception("Ret was never initalized in the heuristic");
-            }
-
+            ret = GetFromLookaheadCPU(currentGameData);
         }
+        //else
+        //{
+
+
+
+
+        //    int[,] zerothQuad = { { 2, 0 }, { 2, 1 }, { 2, 2 }, { 1, 2 }, { 0, 2 } };
+        //    int zerothInt = GetSumFromPoints(d.gameBoard, zerothQuad);
+        //    int[,] firstQuad = { { 3, 0 }, { 3, 1 }, { 3, 2 }, { 4, 2 }, { 5, 2 } };
+        //    int firstInt = GetSumFromPoints(d.gameBoard, firstQuad);
+        //    int[,] secondQuad = { { 0, 3 }, { 1, 3 }, { 2, 3 }, { 2, 4 }, { 2, 5 } };
+        //    int secondInt = GetSumFromPoints(d.gameBoard, secondQuad);
+        //    int[,] thirdQuad = { { 5, 5 }, { 4, 5 }, { 3, 5 }, { 3, 4 }, { 3, 3 } };
+        //    int thirdInt = GetSumFromPoints(d.gameBoard, thirdQuad);
+        //    if (turnCounter < 11)
+        //    {
+
+        //        List<TupleList<int, int>> possibleWinPoints = new List<TupleList<int, int>>();
+        //        for (int i = 0; i < d.winValues.Length; i++)
+        //        {
+        //            if ((d.winValues[i] > 1 && d.winValues[i] < 5) || (d.winValues[i] > 11 && d.winValues[i] < 15))
+        //            {
+        //                possibleWinPoints.Add(PointsFromWinCondition(i));
+
+        //            }
+        //        }
+        //        foreach (var pointArr in possibleWinPoints)
+        //        {
+        //            foreach (var point in pointArr)
+        //            {
+        //                if (d.gameBoard[point.Item1, point.Item2] != TileVals.Blank)
+        //                {
+        //                    continue;
+        //                }
+        //                if (
+        //                    ((-1 < point.Item1 && point.Item1 < 3) && (-1 < point.Item2 && point.Item2 < 3))
+        //                 || ((2 < point.Item1 && point.Item1 < 6) && (2 < point.Item2 && point.Item2 < 6)))
+        //                {
+        //                    if (firstInt < secondInt)
+        //                    {
+        //                        ret = new GameMove(point.Item1, point.Item2, 1, false);
+        //                    }
+        //                    else
+        //                    {
+        //                        ret = new GameMove(point.Item1, point.Item2, 2, false);
+        //                    }
+        //                }
+        //                else if (
+        //                       ((2 < point.Item1 && point.Item1 < 6) && (-1 < point.Item2 && point.Item2 < 3))
+        //                    || ((-1 < point.Item1 && point.Item1 < 3) && (2 < point.Item2 && point.Item2 < 6)))
+        //                {
+        //                    if (zerothInt < thirdInt)
+        //                    {
+        //                        ret = new GameMove(point.Item1, point.Item2, 0, false);
+        //                    }
+        //                    else
+        //                    {
+        //                        ret = new GameMove(point.Item1, point.Item2, 3, false);
+        //                    }
+        //                }
+        //            }
+        //        }
+
+        //    }
+        //    //LATE GAME
+        //    else
+        //    {
+        //        List<TupleList<int, int>> possibleWinPoints = new List<TupleList<int, int>>();
+        //        for (int i = 0; i < d.winValues.Length; i++)
+        //        {
+        //            if (d.winValues[i] >= 23)
+        //            {
+        //                possibleWinPoints.Add(PointsFromWinCondition(i));
+        //            }
+        //        }
+        //        //for each possible win condition
+        //        foreach (var pointArr in possibleWinPoints)
+        //        {
+        //            foreach (var point in pointArr)
+        //            {
+
+        //                if (
+        //                       ((-1 < point.Item1 && point.Item1 < 3) && (-1 < point.Item2 && point.Item2 < 3))
+        //                    || ((2 < point.Item1 && point.Item1 < 6) && (2 < point.Item2 && point.Item2 < 6))
+        //                    )
+        //                {
+        //                    if (firstInt > secondInt)
+        //                    {
+        //                        ret = new GameMove(point.Item1, point.Item2, 1, true);
+        //                    }
+        //                    else
+        //                    {
+        //                        ret = new GameMove(point.Item1, point.Item2, 2, false);
+        //                    }
+        //                }
+        //                else if (
+        //                       ((2 < point.Item1 && point.Item1 < 6) && (-1 < point.Item2 && point.Item2 < 3))
+        //                    || ((-1 < point.Item1 && point.Item1 < 3) && (2 < point.Item2 && point.Item2 < 6)))
+        //                {
+
+        //                    if (zerothInt > thirdInt)
+        //                    {
+        //                        ret = new GameMove(point.Item1, point.Item2, 0, false);
+        //                    }
+        //                    else
+        //                    {
+        //                        ret = new GameMove(point.Item1, point.Item2, 3, false);
+        //                    }
+        //                }
+        //            }
+        //        }
+        //    }
+        //    if (ret.rotIndex == -1)
+        //    {
+        //        throw new Exception("Ret was never initalized in the heuristic");
+        //    }
+
+        //}
         if (d.gameBoard[ret.xCord, ret.yCord] != TileVals.Blank)
         {
             throw new Exception("The AI overwrote a user tile...");
