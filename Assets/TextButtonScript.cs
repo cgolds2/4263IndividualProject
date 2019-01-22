@@ -49,23 +49,44 @@ public class TextButtonScript : MonoBehaviour
 
                 break;
             case "NN":
-                GameMindScript.SetGameType(GameMindScript.GameType.UseAI);
-                UnityEngine.SceneManagement.SceneManager.LoadScene("SampleScene");
+                if(PlayerPrefs.HasKey("file") && PlayerPrefs.HasKey("dir")){
+                    GameMindScript.SetGameType(GameMindScript.GameType.UseAI);
+                    UnityEngine.SceneManagement.SceneManager.LoadScene("SampleScene");
+                }
+                else{
+                    MenuScript.main.enabled = false;
+                    MenuScript.options.enabled = true;
+                    MenuScript.credits.enabled = false;
+                    MenuScript.rules.enabled = false;
+                }
+    
                 break;
             case "Options":
                 MenuScript.main.enabled = false;
                 MenuScript.options.enabled = true;
                 MenuScript.credits.enabled = false;
+                MenuScript.rules.enabled = false;
+
                 break;
             case "Credits":
                 MenuScript.main.enabled = false;
                 MenuScript.options.enabled = false;
                 MenuScript.credits.enabled = true;
+                MenuScript.rules.enabled = false;
+
                 break;
             case "Back":
                 MenuScript.main.enabled = true;
                 MenuScript.options.enabled = false;
                 MenuScript.credits.enabled = false;
+                MenuScript.rules.enabled = false;
+
+                break;
+            case "Rules":
+                MenuScript.main.enabled = false;
+                MenuScript.options.enabled = false;
+                MenuScript.credits.enabled = false;
+                MenuScript.rules.enabled = true;
                 break;
             case "File":
                 string path = EditorUtility.OpenFilePanel("Select Python File", "", "py");
@@ -73,10 +94,14 @@ public class TextButtonScript : MonoBehaviour
                 {
                     //TODO: set this to stuff
                     bool fileContent = File.Exists(path);
-                    var x = Path.GetDirectoryName(path);
-                    var y = Path.GetFileName(path);
-               
-                    
+                    var dir = Path.GetDirectoryName(path);
+                    var file = Path.GetFileName(path);
+
+
+                    PlayerPrefs.SetString("dir", dir);
+                    PlayerPrefs.SetString("file", file);
+
+
                 }
                 break;
             default:

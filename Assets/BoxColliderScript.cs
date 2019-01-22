@@ -54,6 +54,10 @@ public class BoxColliderScript : MonoBehaviour {
     {
         if (GameMindScript.GetGameState() == GameMindScript.GameState.PickingCoord)
         {
+            var cursorObj = GameObject.Find("CursorObject");
+
+            cursorObj.GetComponent<Renderer>().enabled = false;
+
             // load a new scene
             //Debug.Log("Mouse clcked " + this.name);
 

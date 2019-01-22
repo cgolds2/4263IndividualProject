@@ -6,13 +6,17 @@ public class MenuScript : MonoBehaviour {
     public static Camera main;
     public static Camera options;
     public static Camera credits;
+    public static Camera rules;
+
     // Use this for initialization
     void Start()
     {
       main = GameObject.Find("mainCamera").GetComponent<Camera>();
     options = GameObject.Find("optionsCamera").GetComponent<Camera>();
    credits = GameObject.Find("creditsCamera").GetComponent<Camera>();
-    main.enabled = true;
+        rules = GameObject.Find("rulesCamera").GetComponent<Camera>();
+
+        main.enabled = true;
         options.enabled = false;
         credits.enabled = false;
     }

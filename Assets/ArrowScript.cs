@@ -56,6 +56,8 @@ public class ArrowScript : MonoBehaviour {
     {
         if (GameMindScript.GetGameState() == GameMindScript.GameState.PickingRotation)
         {
+            var cursorObj = GameObject.Find("CursorObject");
+            cursorObj.GetComponent<Renderer>().enabled = false;
             GameMindScript.SetGameState(GameMindScript.GameState.NotTurn);
 
             // load a new scene
