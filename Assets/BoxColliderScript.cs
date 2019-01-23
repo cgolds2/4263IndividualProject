@@ -5,10 +5,11 @@ using UnityEngine;
 public class BoxColliderScript : MonoBehaviour {
     Material mat;
     static bool red;
-	// Use this for initialization
-	void Start () {
-		
-	}
+
+    // Use this for initialization
+    void Start () {
+       
+    }
 	
 	// Update is called once per frame
 	void Update () {
@@ -50,6 +51,8 @@ public class BoxColliderScript : MonoBehaviour {
 
     }
 
+  
+
     void OnMouseDown()
     {
         if (GameMindScript.GetGameState() == GameMindScript.GameState.PickingCoord)
@@ -78,7 +81,6 @@ public class BoxColliderScript : MonoBehaviour {
                 //Debug.Log("Mouse clcked " + this.name);
 
                 var marble = GameMindScript.PlaceMarble(this.transform.position);
-
 
 
                 GameMindScript.lastMarble = marble;

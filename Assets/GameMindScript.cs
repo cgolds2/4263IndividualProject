@@ -9,7 +9,7 @@ using UnityEngine.UI;
 
 public class GameMindScript : MonoBehaviour
 {
-  
+
     private static GameType typeOfGame = GameType.UseHeu;
     public static GameMove currentMove = null;
     public static GameObject lastMarble = null;
@@ -20,11 +20,13 @@ public class GameMindScript : MonoBehaviour
    * 24-27: top left bot right diag
    * 28-31: top right bot left diag
    */
-   public  static GameData currentGameData;
+    public static GameData currentGameData;
     static System.Random r = new System.Random();
     static int startQuadrant = -1;
     private static GameState stateOfGame = GameState.NotTurn;
     static GameWinner whoWon = 0;
+
+
 
     public class GameData : ICloneable
     {
@@ -203,6 +205,7 @@ public class GameMindScript : MonoBehaviour
 
     void RestartGame()
     {
+        playOnce = true;
         GameType s = GetGameType();
         switch (s)
         {
@@ -259,10 +262,16 @@ public class GameMindScript : MonoBehaviour
         SetNextGameState(GameState.Over);
     }
 
+    static bool playOnce;
     void OnGUI()
     {
         if (GetGameState() == GameState.Over)
         {
+            if (playOnce)
+            {
+                GetComponent<AudioSource>().Play();
+                playOnce = false;
+            }
 
             var buttonObject = new GameObject("Button");
 
@@ -335,6 +344,8 @@ public class GameMindScript : MonoBehaviour
     public static void RotateSquareInUnity(int index, bool rotLeft)
     {
         var mQuad = GameObject.Find("BR0" + GameMindScript.GetQuadFromPoint(GameMindScript.currentMove.xCord, GameMindScript.currentMove.yCord));
+        mQuad.GetComponent<AudioSource>().Play();
+
         var ScriptThatYouWantM = mQuad.GetComponent<BoardQuadScript>();
         ScriptThatYouWantM.marbles.Add(lastMarble);
 

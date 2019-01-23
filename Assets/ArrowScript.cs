@@ -64,9 +64,9 @@ public class ArrowScript : MonoBehaviour {
             //Debug.Log("Mouse clcked " + this.name);
 
 
-        int index = int.Parse(this.name.Substring(15, 1));
+            int index = int.Parse(this.name.Substring(15, 1));
 
-        var loc = GameMindScript.ArrayLocationFromIndex(index);
+            var loc = GameMindScript.ArrayLocationFromIndex(index);
 
 
             int rotIndex = index / 2;
@@ -81,4 +81,5 @@ public class ArrowScript : MonoBehaviour {
         }
            
     }
+
 }
