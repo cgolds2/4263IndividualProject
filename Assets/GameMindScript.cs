@@ -9,11 +9,7 @@ using UnityEngine.UI;
 
 public class GameMindScript : MonoBehaviour
 {
-    static int[] lastTurn = new int[85];
-    static GameMove lastMove;
-    static List<int[]> turns = new List<int[]>();
-    static bool isXTurn = false;
-    static int gameCounter = -1;
+  
     private static GameType typeOfGame = GameType.UseHeu;
     public static GameMove currentMove = null;
     public static GameObject lastMarble = null;
@@ -24,7 +20,7 @@ public class GameMindScript : MonoBehaviour
    * 24-27: top left bot right diag
    * 28-31: top right bot left diag
    */
-    static GameData currentGameData;
+   public  static GameData currentGameData;
     static System.Random r = new System.Random();
     static int startQuadrant = -1;
     private static GameState stateOfGame = GameState.NotTurn;
@@ -35,6 +31,10 @@ public class GameMindScript : MonoBehaviour
         public TileVals[,] gameBoard;
         public int[] winValues = new int[32];
         public bool isGameOver = false;
+        public int[] lastTurn = new int[85];
+        public GameMove lastMove;
+        public List<int[]> turns = new List<int[]>();
+        public bool isXTurn = false;
         public GameData()
         {
             gameBoard = new TileVals[6, 6];
@@ -42,17 +42,28 @@ public class GameMindScript : MonoBehaviour
             isGameOver = false;
         }
 
-        public GameData(TileVals[,] gameBoard, int[] winValues, bool isGameOver)
+        public GameData(TileVals[,] gameBoard, int[] winValues, bool isGameOver, int[] lastTurn, GameMove lastMove, List<int[]> turns, bool isXTurn)
         {
             this.gameBoard = gameBoard;
             this.winValues = winValues;
             this.isGameOver = isGameOver;
+            this.lastTurn = lastTurn;
+            this.lastMove = lastMove;
+            this.turns = turns;
+            this.isXTurn = isXTurn;
         }
-
 
         public object Clone()
         {
-            return new GameData((TileVals[,])this.gameBoard.Clone(), (int[]) this.winValues.Clone(), this.isGameOver);
+            return new GameData(
+                (TileVals[,])this.gameBoard.Clone(),
+                (int[])this.winValues.Clone(),
+                this.isGameOver,
+                (int[])this.lastTurn.Clone(),
+                this.lastMove==null?null:(GameMove)this.lastMove.Clone(),
+                (List<int[]>)this.turns.Clone(),
+                this.isXTurn
+            );
         }
     }
 
@@ -205,12 +216,12 @@ public class GameMindScript : MonoBehaviour
                 SetTitleText("Pentago\nVs Neural Net");
                 break;
         }
-
-        lastTurn = new int[85];
-        lastMove = null;
-        turns = new List<int[]>();
-        isXTurn = false;
         currentGameData = new GameData();
+
+        currentGameData.lastTurn = new int[85];
+        currentGameData.lastMove = null;
+        currentGameData.turns = new List<int[]>();
+        currentGameData.isXTurn = false;
         //winValues = new int[32];
         r = new System.Random();
         startQuadrant = -1;
@@ -371,12 +382,12 @@ public class GameMindScript : MonoBehaviour
         var t = mQuad.GetComponent<Text>();
         if (ended)
         {
-            t.text = "Turn #" + (GetTurns().Count) + "\n" + s + "\n" + (!isXTurn ? "(Red)" : "(Black)");
+            t.text = "Turn #" + (GetTurns(currentGameData).Count) + "\n" + s + "\n" + (!currentGameData.isXTurn ? "(Red)" : "(Black)");
 
         }
         else
         {
-            t.text = "Turn #" + (GetTurns().Count + 1) + "\n" + s + "\n" + (isXTurn ? "(Red)" : "(Black)");
+            t.text = "Turn #" + (GetTurns(currentGameData).Count + 1) + "\n" + s + "\n" + (currentGameData.isXTurn ? "(Red)" : "(Black)");
 
         }
     }
@@ -388,7 +399,7 @@ public class GameMindScript : MonoBehaviour
         var marble = GameObject.Find("Marble");
 
         GameObject marbleToPlace = Instantiate(marble);
-        marbleToPlace.GetComponent<Renderer>().material.color = isXTurn ? Color.red : Color.black;
+        marbleToPlace.GetComponent<Renderer>().material.color = currentGameData.isXTurn ? Color.red : Color.black;
         marbleToPlace.transform.position = place;
         marbleToPlace.transform.AddPos(y: 1);
 
@@ -404,27 +415,27 @@ public class GameMindScript : MonoBehaviour
     /// <param name="g">The move to mark down.</param>
     public static void UpdateWinCondition(GameMove g, ref GameData d)
     {
-        isXTurn = !isXTurn;
+        d.isXTurn = !d.isXTurn;
         //change turn
-        lastMove = g;
+        d.lastMove = g;
 
 
-        d.gameBoard[g.xCord, g.yCord] = isXTurn ? TileVals.X : TileVals.O;
+        d.gameBoard[g.xCord, g.yCord] = d.isXTurn ? TileVals.X : TileVals.O;
         UpdatePoint(d.gameBoard, g.xCord, g.yCord, ref d);
-        TrackPlacement(g.xCord, g.yCord);
+        TrackPlacement(g.xCord, g.yCord, ref d);
 
-        TrackRotation(g.rotIndex, g.rotLeft);
+        TrackRotation(g.rotIndex, g.rotLeft, ref d);
 
         //rotation
         d.gameBoard = RotateSquare(d.gameBoard, g.rotIndex, g.rotLeft);
 
 
         UpdateRotation(d.gameBoard, g.rotIndex, ref d);
-        UpdateTurn();
+        UpdateTurn(ref d);
         int gameOver = IsGameWon(d);
         if (gameOver > 0)
         {
-            Console.Write("Game Over On Turn " + GetTurns().Count + ".\n");
+            Console.Write("Game Over On Turn " + GetTurns(d).Count + ".\n");
             if (gameOver == 1)
             {
                 whoWon = GameWinner.FirstPlayer;
@@ -449,52 +460,52 @@ public class GameMindScript : MonoBehaviour
 
 
 
-    static List<int[]> GetTurns()
+    static List<int[]> GetTurns(GameData d)
     {
-        return turns;
+        return d.turns;
     }
     //keeps track of which player is allowed to move
 
-    static void AddTurn(int[] t)
+    static void AddTurn(int[] t, ref GameData d)
     {
         if (t.Length != 85)
         {
             throw new ArgumentException("Array did not have 85 elements");
         }
-        turns.Add(t);
+        d.turns.Add(t);
     }
-    static void TrackPlacement(int x, int y)
+    static void TrackPlacement(int x, int y, ref GameData d)
     {
-        lastTurn[x * 6 + y] = 1;
+        d.lastTurn[x * 6 + y] = 1;
     }
-    static void TrackRotation(int x, String y)
+    static void TrackRotation(int x, String y, ref GameData d)
     {
         if (y == "right" || y == "Right" || y == "r" || y == "R")
         {
-            TrackRotation(x, false);
+            TrackRotation(x, false, ref d);
         }
         else
         {
-            TrackRotation(x, true);
+            TrackRotation(x, true, ref d);
         }
     }
-    static void TrackRotation(int x, bool rotLeft)
+    static void TrackRotation(int x, bool rotLeft, ref GameData d)
     {
         if (rotLeft)
         {
-            lastTurn[84 - ((x * 2) + 1)] = 1;
+            d.lastTurn[84 - ((x * 2) + 1)] = 1;
 
         }
         else
         {
-            lastTurn[84 - (x * 2)] = 1;
+            d.lastTurn[84 - (x * 2)] = 1;
 
         }
     }
-    static void UpdateTurn()
+    static void UpdateTurn(ref GameData d)
     {
-        AddTurn(lastTurn);
-        lastTurn = new int[85];
+        AddTurn(d.lastTurn, ref d);
+        d.lastTurn = new int[85];
     }
 
 
@@ -1145,8 +1156,13 @@ public class GameMindScript : MonoBehaviour
                         {
                             GameMove potentialMove = new GameMove(i, j, k / 2, k % 2 == 0);
 
+                            GameData tmp = (GameData) d.Clone();
                             bestMove.Move = potentialMove;
-                            bestMove.Max = BestOFromWinConditions(d, potentialMove);
+                            bestMove.Max = BestXFromWinConditions(tmp, potentialMove);
+                            UpdateWinCondition(potentialMove, ref tmp);
+                            bestMove.Min = BestOFromWinConditions(d, potentialMove);
+
+
                         }
                         else
                         {
@@ -1155,9 +1171,20 @@ public class GameMindScript : MonoBehaviour
                             GameMove potentialMove = new GameMove(i, j, k / 2, k % 2 == 0);
 
                             tempLook.Move = potentialMove;
-                            tempLook.Max = BestOFromWinConditions(d, potentialMove);
 
-                            if(tempLook.Max > bestMove.Max)
+                            GameData tmp = (GameData)d.Clone();
+
+                            int tmpMax = BestXFromWinConditions(tmp, potentialMove);
+                            UpdateWinCondition(potentialMove, ref tmp);
+                            int tmpMin = BestOFromWinConditions(tmp, potentialMove);
+
+
+                            if(tmpMax == 5){
+                                return potentialMove;
+                            }
+                           
+                           
+                            if ((tmpMax > bestMove.Max && tmpMin<5) || bestMove.Min == 5)
                             {
                                 bestMove = tempLook;
                             }
@@ -1192,6 +1219,8 @@ public class GameMindScript : MonoBehaviour
                     {
                         GameMove potentialMove = new GameMove(i, j, k / 2, k % 2 == 0);
                         int bestX = BestXFromWinConditions(d, potentialMove);
+                      
+
                         if (bestX > best.Max)
                         {
                             best.Max = bestX;
@@ -1273,6 +1302,7 @@ public class GameMindScript : MonoBehaviour
 
     static GameMove PentagoHeuristic(GameData d)
     {
+
         d = (GameData)d.Clone();
 
 
@@ -1280,19 +1310,20 @@ public class GameMindScript : MonoBehaviour
         {
             if (d.winValues[i] == 4 || d.winValues[i] == 40)
             {
-                var points = PointsFromWinCondition(i);
-                foreach (var item in points)
-                {
-                    if (d.gameBoard[item.Item1, item.Item2] == TileVals.Blank)
-                    {
-                        int quad = GetQuadFromPoint(item.Item1, item.Item2);
-                        return new GameMove(item.Item1, item.Item2, quad, false);
-                    }
+                return GetFromLookaheadCPU(currentGameData);
+                //var points = PointsFromWinCondition(i);
+                //foreach (var item in points)
+                //{
+                //    if (d.gameBoard[item.Item1, item.Item2] == TileVals.Blank)
+                //    {
+                //        //int quad = GetQuadFromPoint(item.Item1, item.Item2);
+                //        //return new GameMove(item.Item1, item.Item2, quad, false);
+                //    }
 
-                }
+                //}
             }
         }
-        int turnCounter = GetTurns().Count / 2;
+        int turnCounter = GetTurns(d).Count / 2;
         turnCounter++;
         GameMove ret = new GameMove();
         ret.rotIndex = -1;
@@ -2096,7 +2127,7 @@ public class MyTuple<T1, T2>
     }
 }
 
-public class GameMove
+public class GameMove : ICloneable
 {
     public int xCord;
     public int yCord;
@@ -2116,7 +2147,19 @@ public class GameMove
     }
 
 
+    public object Clone()
 
+    {
+        return new GameMove(this.xCord, this.yCord, this.rotIndex, this.rotLeft);
+    }
+
+    }
+static class Extensions
+{
+    public static IList<T> Clone<T>(this IList<T> listToClone) where T : ICloneable
+    {
+        return listToClone.Select(item => (T)item.Clone()).ToList();
+    }
 }
 
 

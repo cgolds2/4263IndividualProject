@@ -54,28 +54,42 @@ public class BoxColliderScript : MonoBehaviour {
     {
         if (GameMindScript.GetGameState() == GameMindScript.GameState.PickingCoord)
         {
-            var cursorObj = GameObject.Find("CursorObject");
-
-            cursorObj.GetComponent<Renderer>().enabled = false;
-
-            // load a new scene
-            //Debug.Log("Mouse clcked " + this.name);
-
-            var marble = GameMindScript.PlaceMarble(this.transform.position);
-
             int index = int.Parse(this.name.Substring(12, 2));
-
-            GameMindScript.lastMarble = marble;
-
             var loc = GameMindScript.ArrayLocationFromIndex(index);
 
 
-            GameMindScript.currentMove = new GameMove();
-            GameMindScript.currentMove.xCord = loc.Item1;
-            GameMindScript.currentMove.yCord = loc.Item2;
+   
 
-            GameMindScript.SetGameState(GameMindScript.GameState.PickingRotation);
-    
+            if (GameMindScript.currentGameData.gameBoard[loc.Item1,loc.Item2] != GameMindScript.TileVals.Blank){
+                //tile occupied
+
+            }else{
+                GameMindScript.currentMove = new GameMove
+                {
+                    xCord = loc.Item1,
+                    yCord = loc.Item2
+                };
+                //place the marble
+                var cursorObj = GameObject.Find("CursorObject");
+
+                cursorObj.GetComponent<Renderer>().enabled = false;
+
+                // load a new scene
+                //Debug.Log("Mouse clcked " + this.name);
+
+                var marble = GameMindScript.PlaceMarble(this.transform.position);
+
+
+
+                GameMindScript.lastMarble = marble;
+
+
+                GameMindScript.SetGameState(GameMindScript.GameState.PickingRotation);
+
+            }
+
+
+
         }
 
     }

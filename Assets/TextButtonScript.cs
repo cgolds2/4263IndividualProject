@@ -1,5 +1,5 @@
 ﻿using System.IO;
-using UnityEditor;
+using SFB;
 using UnityEngine;
 
 public class TextButtonScript : MonoBehaviour
@@ -89,7 +89,10 @@ public class TextButtonScript : MonoBehaviour
                 MenuScript.rules.enabled = true;
                 break;
             case "File":
-                string path = EditorUtility.OpenFilePanel("Select Python File", "", "py");
+
+
+                var paths = StandaloneFileBrowser.OpenFilePanel("Select Python Filee", "", "py", false);
+                var path = paths[0];
                 if (path.Length != 0)
                 {
                     //TODO: set this to stuff
