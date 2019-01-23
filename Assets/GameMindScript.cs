@@ -1179,12 +1179,12 @@ public class GameMindScript : MonoBehaviour
                             int tmpMin = BestOFromWinConditions(tmp, potentialMove);
 
 
-                            if(tmpMax == 5){
+                            if(tmpMax >= 5){
                                 return potentialMove;
                             }
                            
                            
-                            if ((tmpMax > bestMove.Max && tmpMin<5) || bestMove.Min == 5)
+                            if ((tmpMax > bestMove.Max && tmpMin<5) || bestMove.Min >= 5)
                             {
                                 bestMove = tempLook;
                             }
