@@ -56,15 +56,17 @@ public class ArrowScript : MonoBehaviour {
     {
         if (GameMindScript.GetGameState() == GameMindScript.GameState.PickingRotation)
         {
+            var cursorObj = GameObject.Find("CursorObject");
+            cursorObj.GetComponent<Renderer>().enabled = false;
             GameMindScript.SetGameState(GameMindScript.GameState.NotTurn);
 
             // load a new scene
             //Debug.Log("Mouse clcked " + this.name);
 
 
-        int index = int.Parse(this.name.Substring(15, 1));
+            int index = int.Parse(this.name.Substring(15, 1));
 
-        var loc = GameMindScript.ArrayLocationFromIndex(index);
+            var loc = GameMindScript.ArrayLocationFromIndex(index);
 
 
             int rotIndex = index / 2;
@@ -79,4 +81,5 @@ public class ArrowScript : MonoBehaviour {
         }
            
     }
+
 }

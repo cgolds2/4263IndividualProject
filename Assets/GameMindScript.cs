@@ -1,21 +1,15 @@
-﻿using System.Collections;
+﻿using System;
 using System.Collections.Generic;
-using UnityEngine;
-using System;
-using System.Linq;
 using System.Diagnostics;
 using System.IO;
-using System.ComponentModel;
+using System.Linq;
 using System.Text.RegularExpressions;
+using UnityEngine;
 using UnityEngine.UI;
 
 public class GameMindScript : MonoBehaviour
 {
-    static int[] lastTurn = new int[85];
-    static GameMove lastMove;
-    static List<int[]> turns = new List<int[]>();
-    static bool isXTurn = false;
-    static int gameCounter = -1;
+
     private static GameType typeOfGame = GameType.UseHeu;
     public static GameMove currentMove = null;
     public static GameObject lastMarble = null;
@@ -26,15 +20,62 @@ public class GameMindScript : MonoBehaviour
    * 24-27: top left bot right diag
    * 28-31: top right bot left diag
    */
-    static int[] winValues = new int[32];
+    public static GameData currentGameData;
     static System.Random r = new System.Random();
     static int startQuadrant = -1;
-    static TileVals[,] gameBoard;
     private static GameState stateOfGame = GameState.NotTurn;
     static GameWinner whoWon = 0;
+    public static Exception exGameError;
 
-    public static void SetGameState(GameState s){
-        if(GetGameState() != GameState.Over){
+
+
+    public class GameData : ICloneable
+    {
+        public TileVals[,] gameBoard;
+        public int[] winValues = new int[32];
+        public bool isGameOver = false;
+        public int[] lastTurn = new int[85];
+        public GameMove lastMove;
+        public List<int[]> turns = new List<int[]>();
+        public bool isXTurn = false;
+        public GameData()
+        {
+            gameBoard = new TileVals[6, 6];
+            winValues = new int[32];
+            isGameOver = false;
+        }
+
+        public GameData(TileVals[,] gameBoard, int[] winValues, bool isGameOver, int[] lastTurn, GameMove lastMove, List<int[]> turns, bool isXTurn)
+        {
+            this.gameBoard = gameBoard;
+            this.winValues = winValues;
+            this.isGameOver = isGameOver;
+            this.lastTurn = lastTurn;
+            this.lastMove = lastMove;
+            this.turns = turns;
+            this.isXTurn = isXTurn;
+        }
+
+        public object Clone()
+        {
+            return new GameData(
+                (TileVals[,])this.gameBoard.Clone(),
+                (int[])this.winValues.Clone(),
+                this.isGameOver,
+                (int[])this.lastTurn.Clone(),
+                this.lastMove==null?null:(GameMove)this.lastMove.Clone(),
+                (List<int[]>)this.turns.Clone(),
+                this.isXTurn
+            );
+        }
+    }
+
+    
+
+    public static void SetGameState(GameState s)
+    {
+        if (GetGameState() != GameState.Over)
+        {
             if (GetGameType() != GameType.TwoPlayer && s == GameState.NotTurn)
             {
                 SetMenuText("Computer Turn", false);
@@ -54,22 +95,24 @@ public class GameMindScript : MonoBehaviour
                         SetMenuText("Picking Rotation", false);
                         break;
                     case GameState.Moving:
-                        break;                       
+                        break;
                     case GameState.Over:
                         SetMenuText("Game Over", true);
                         break;
                 }
             }
-          
+
             stateOfGame = s;
         }
     }
 
-    public static GameState GetGameState(){
+    public static GameState GetGameState()
+    {
         return stateOfGame;
     }
 
-    public static void SetNextGameState(GameState s){
+    public static void SetNextGameState(GameState s)
+    {
         if (nextState != GameState.Over)
         {
             nextState = s;
@@ -98,7 +141,8 @@ public class GameMindScript : MonoBehaviour
         UseAI
     }
 
-    public enum GameWinner{
+    public enum GameWinner
+    {
         FirstPlayer,
         SecondPlayer,
         AI,
@@ -137,7 +181,7 @@ public class GameMindScript : MonoBehaviour
             case GameState.Moving:
                 break;
             case GameState.SecondPlayerTurn:
-               
+
                 switch (typeOfGame)
                 {
                     case GameType.TwoPlayer:
@@ -162,6 +206,7 @@ public class GameMindScript : MonoBehaviour
 
     void RestartGame()
     {
+        playOnce = true;
         GameType s = GetGameType();
         switch (s)
         {
@@ -175,15 +220,16 @@ public class GameMindScript : MonoBehaviour
                 SetTitleText("Pentago\nVs Neural Net");
                 break;
         }
+        currentGameData = new GameData();
 
-        lastTurn = new int[85];
-        lastMove = null;
-        turns = new List<int[]>();
-        isXTurn = false;
-        winValues = new int[32];
+        currentGameData.lastTurn = new int[85];
+        currentGameData.lastMove = null;
+        currentGameData.turns = new List<int[]>();
+        currentGameData.isXTurn = false;
+        //winValues = new int[32];
         r = new System.Random();
         startQuadrant = -1;
-        gameBoard = new TileVals[6, 6];
+        //gameBoard = new TileVals[6, 6];
         //needs to be direct
         stateOfGame = GameState.NotTurn;
         SetGameState(GameState.NotTurn);
@@ -201,22 +247,32 @@ public class GameMindScript : MonoBehaviour
     public static void MovePlayer()
     {
         RotateSquareInUnity(currentMove.rotIndex, currentMove.rotLeft);
-        if(UpdateWinCondition(currentMove)){
+        UpdateWinCondition(currentMove, ref currentGameData);
+        if (currentGameData.isGameOver)
+        {
             EndGame();
         }
-        
+
         currentMove = null;
     }
 
-    public static void EndGame(){
+    public static void EndGame()
+    {
         // Make a background box
         // Make the first button. If it is pressed, Application.Loadlevel (1) will be executed
         SetNextGameState(GameState.Over);
     }
 
+    static bool playOnce;
     void OnGUI()
     {
-        if(GetGameState() == GameState.Over){
+        if (GetGameState() == GameState.Over)
+        {
+            if (playOnce)
+            {
+                GetComponent<AudioSource>().Play();
+                playOnce = false;
+            }
 
             var buttonObject = new GameObject("Button");
 
@@ -229,7 +285,7 @@ public class GameMindScript : MonoBehaviour
 
             }
         }
-      
+
     }
 
     public static void MoveOther()
@@ -238,16 +294,19 @@ public class GameMindScript : MonoBehaviour
         nextState = GameState.PickingCoord;
         GameMove g;
 
-        if(typeOfGame==GameType.TwoPlayer){
+        if (typeOfGame == GameType.TwoPlayer)
+        {
             SetGameState(GameState.PickingCoord);
-        }else{
+        }
+        else
+        {
             if (typeOfGame == GameType.UseAI)
             {
-                g = NNTurn(gameBoard);
+                g = NNTurn(currentGameData.gameBoard);
             }
             else if (typeOfGame == GameType.UseHeu)
             {
-                g = PentagoHeuristic(gameBoard);
+                g = PentagoHeuristic(currentGameData);
             }
             else
             {
@@ -257,14 +316,15 @@ public class GameMindScript : MonoBehaviour
 
 
             PlaceAndTurnInUnity(g);
-            if (UpdateWinCondition(g))
+            UpdateWinCondition(g, ref currentGameData);
+            if (currentGameData.isGameOver)
             {
                 EndGame();
             }
         }
 
 
-       
+
 
     }
 
@@ -273,22 +333,25 @@ public class GameMindScript : MonoBehaviour
         return y * 6 + x;
     }
 
-    public static MyTuple<int,int> ArrayLocationFromIndex(int index){
+    public static MyTuple<int, int> ArrayLocationFromIndex(int index)
+    {
 
         return new MyTuple<int, int>(index % 6, index / 6);
-      
+
 
 
     }
 
     public static void RotateSquareInUnity(int index, bool rotLeft)
     {
-        var mQuad = GameObject.Find("BR0" + GameMindScript.GetQuadFromPoint(GameMindScript.currentMove.xCord,GameMindScript.currentMove.yCord));
+        var mQuad = GameObject.Find("BR0" + GameMindScript.GetQuadFromPoint(GameMindScript.currentMove.xCord, GameMindScript.currentMove.yCord));
+        mQuad.GetComponent<AudioSource>().Play();
+
         var ScriptThatYouWantM = mQuad.GetComponent<BoardQuadScript>();
         ScriptThatYouWantM.marbles.Add(lastMarble);
 
 
-        var rotator = GameObject.Find("BR0"+index);
+        var rotator = GameObject.Find("BR0" + index);
         var ScriptThatYouWant = rotator.GetComponent<BoardQuadScript>();
         ScriptThatYouWant.Rotate(rotLeft);
 
@@ -308,18 +371,18 @@ public class GameMindScript : MonoBehaviour
 
         GameMindScript.lastMarble = mar;
 
-        RotateSquareInUnity(g.rotIndex,g.rotLeft);
+        RotateSquareInUnity(g.rotIndex, g.rotLeft);
 
     }
-    
 
-     public static void SetTitleText(string s)
+
+    public static void SetTitleText(string s)
     {
         var mQuad = GameObject.Find("TextTitle");
 
         GameMindScript.GetGameType();
         var t = mQuad.GetComponent<Text>();
-        t.text =s + "\n-----------";
+        t.text = s + "\n-----------";
     }
 
 
@@ -331,23 +394,24 @@ public class GameMindScript : MonoBehaviour
         var t = mQuad.GetComponent<Text>();
         if (ended)
         {
-            t.text = "Turn #" + (GetTurns().Count ) + "\n" + s + "\n" + (!isXTurn ? "(Red)" : "(Black)");
+            t.text = "Turn #" + (GetTurns(currentGameData).Count) + "\n" + s + "\n" + (!currentGameData.isXTurn ? "(Red)" : "(Black)");
 
         }
         else
         {
-            t.text = "Turn #" + (GetTurns().Count + 1) + "\n" + s + "\n" + (isXTurn ? "(Red)" : "(Black)");
+            t.text = "Turn #" + (GetTurns(currentGameData).Count + 1) + "\n" + s + "\n" + (currentGameData.isXTurn ? "(Red)" : "(Black)");
 
         }
     }
 
-    public static GameObject PlaceMarble(Vector3 place){
-      
+    public static GameObject PlaceMarble(Vector3 place)
+    {
+
         var mat = Resources.Load("RedMarble");
         var marble = GameObject.Find("Marble");
 
         GameObject marbleToPlace = Instantiate(marble);
-        marbleToPlace.GetComponent<Renderer>().material.color = isXTurn ? Color.red : Color.black;
+        marbleToPlace.GetComponent<Renderer>().material.color = currentGameData.isXTurn ? Color.red : Color.black;
         marbleToPlace.transform.position = place;
         marbleToPlace.transform.AddPos(y: 1);
 
@@ -361,29 +425,29 @@ public class GameMindScript : MonoBehaviour
     /// </summary>
     /// <returns><c>true</c>, if game is over, <c>false</c> otherwise.</returns>
     /// <param name="g">The move to mark down.</param>
-    public static bool UpdateWinCondition(GameMove g)
+    public static void UpdateWinCondition(GameMove g, ref GameData d)
     {
-        isXTurn = !isXTurn;
+        d.isXTurn = !d.isXTurn;
         //change turn
-        lastMove = g;
+        d.lastMove = g;
 
 
-        gameBoard[g.xCord, g.yCord] = isXTurn ? TileVals.X : TileVals.O;
-        UpdatePoint(gameBoard, g.xCord, g.yCord);
-        TrackPlacement(g.xCord, g.yCord);
+        d.gameBoard[g.xCord, g.yCord] = d.isXTurn ? TileVals.X : TileVals.O;
+        UpdatePoint(d.gameBoard, g.xCord, g.yCord, ref d);
+        TrackPlacement(g.xCord, g.yCord, ref d);
 
-        TrackRotation(g.rotIndex, g.rotLeft);
+        TrackRotation(g.rotIndex, g.rotLeft, ref d);
 
         //rotation
-        gameBoard = RotateSquare(gameBoard, g.rotIndex, g.rotLeft);
+        d.gameBoard = RotateSquare(d.gameBoard, g.rotIndex, g.rotLeft);
 
 
-        UpdateRotation(gameBoard, g.rotIndex);
-        UpdateTurn();
-        int gameOver = IsGameWon(gameBoard);
+        UpdateRotation(d.gameBoard, g.rotIndex, ref d);
+        UpdateTurn(ref d);
+        int gameOver = IsGameWon(d);
         if (gameOver > 0)
         {
-            Console.Write("Game Over On Turn " + GetTurns().Count + ".\n");
+            Console.Write("Game Over On Turn " + GetTurns(d).Count + ".\n");
             if (gameOver == 1)
             {
                 whoWon = GameWinner.FirstPlayer;
@@ -399,56 +463,61 @@ public class GameMindScript : MonoBehaviour
             {
                 Console.Write("Draw");
             }
-            return true;
+            d.isGameOver = true;
+            return;
         }
-        return false;
+        d.isGameOver = false;
     }
 
 
 
 
-    static List<int[]> GetTurns()
+    static List<int[]> GetTurns(GameData d)
     {
-        return turns;
+        return d.turns;
     }
     //keeps track of which player is allowed to move
 
-    static void AddTurn(int[] t)
+    static void AddTurn(int[] t, ref GameData d)
     {
         if (t.Length != 85)
         {
             throw new ArgumentException("Array did not have 85 elements");
         }
-        turns.Add(t);
+        d.turns.Add(t);
     }
-    static void TrackPlacement(int x, int y)
+    static void TrackPlacement(int x, int y, ref GameData d)
     {
-        lastTurn[x * 6 + y] = 1;
+        d.lastTurn[x * 6 + y] = 1;
     }
-    static void TrackRotation(int x, String y)
+    static void TrackRotation(int x, String y, ref GameData d)
     {
         if (y == "right" || y == "Right" || y == "r" || y == "R")
-            TrackRotation(x, false);
+        {
+            TrackRotation(x, false, ref d);
+        }
         else
-            TrackRotation(x, true);
+        {
+            TrackRotation(x, true, ref d);
+        }
     }
-    static void TrackRotation(int x, bool rotLeft)
+    static void TrackRotation(int x, bool rotLeft, ref GameData d)
     {
         if (rotLeft)
         {
-            lastTurn[84 - ((x * 2) + 1)] = 1;
+            d.lastTurn[84 - ((x * 2) + 1)] = 1;
 
         }
         else
         {
-            lastTurn[84 - (x * 2)] = 1;
+            d.lastTurn[84 - (x * 2)] = 1;
 
         }
     }
-    static void UpdateTurn()
+    static void UpdateTurn(ref GameData d)
     {
-        AddTurn(lastTurn);
-        lastTurn = new int[85];
+        AddTurn(d.lastTurn, ref d);
+        d.lastTurn = new int[85];
     }
 
 
@@ -561,7 +630,7 @@ public class GameMindScript : MonoBehaviour
     }
 
 
-    static void UpdatePoint(TileVals[,] board, int x, int y)
+    static void UpdatePoint(TileVals[,] board, int x, int y, ref GameData d)
     {
 
         #region Update Horizontal
@@ -570,14 +639,14 @@ public class GameMindScript : MonoBehaviour
             //update leftmost to right
             TileVals[] xTiles = CustomArray<TileVals>.GetRowMinusFirst(board, y);
             var xSum = Array.ConvertAll(xTiles, value => (int)value).Sum();
-            winValues[y * 2 + 1] = xSum;
+            d.winValues[y * 2 + 1] = xSum;
         }
         if (x != 5)
         {
             //update left to rightmost
             TileVals[] xTiles = CustomArray<TileVals>.GetRowMinusLast(board, y);
             var xSum = Array.ConvertAll(xTiles, value => (int)value).Sum();
-            winValues[y * 2] = xSum;
+            d.winValues[y * 2] = xSum;
         }
         #endregion
 
@@ -587,14 +656,14 @@ public class GameMindScript : MonoBehaviour
             //update topmost to bot
             TileVals[] yTiles = CustomArray<TileVals>.GetColumnMinusFirst(board, x);
             var ySum = Array.ConvertAll(yTiles, value => (int)value).Sum();
-            winValues[12 + x * 2] = ySum;
+            d.winValues[12 + x * 2] = ySum;
         }
         if (y != 5)
         {
             //update top to botmost
             TileVals[] yTiles = CustomArray<TileVals>.GetColumnMinusLast(board, x);
             var ySum = Array.ConvertAll(yTiles, value => (int)value).Sum();
-            winValues[12 + x * 2 + 1] = ySum;
+            d.winValues[12 + x * 2 + 1] = ySum;
         }
         #endregion
 
@@ -615,8 +684,8 @@ public class GameMindScript : MonoBehaviour
             //top left point
             var diagOne = (DiagFromPoint(0, 0, true));
             var diagTwo = (DiagFromPoint(1, 1, true));
-            winValues[24 + 1] = SumDiag(board, diagOne);
-            winValues[24 + 2] = SumDiag(board, diagTwo);
+            d.winValues[24 + 1] = SumDiag(board, diagOne);
+            d.winValues[24 + 2] = SumDiag(board, diagTwo);
 
         }
         if ((tmpX + tmpY) == 1)
@@ -626,8 +695,8 @@ public class GameMindScript : MonoBehaviour
             TupleList<int, int>[] diags = new TupleList<int, int>[4];
             var diagOne = (DiagFromPoint(0, 1, true));
             var diagTwo = (DiagFromPoint(1, 0, true));
-            winValues[24 + 0] = SumDiag(board, diagOne);
-            winValues[24 + 3] = SumDiag(board, diagTwo);
+            d.winValues[24 + 0] = SumDiag(board, diagOne);
+            d.winValues[24 + 3] = SumDiag(board, diagTwo);
 
         }
         #endregion
@@ -645,8 +714,8 @@ public class GameMindScript : MonoBehaviour
             //top right point
             var diagOne = (DiagFromPoint(5, 0, false));
             var diagTwo = (DiagFromPoint(4, 1, false));
-            winValues[28 + 1] = SumDiag(board, diagOne);
-            winValues[28 + 2] = SumDiag(board, diagTwo);
+            d.winValues[28 + 1] = SumDiag(board, diagOne);
+            d.winValues[28 + 2] = SumDiag(board, diagTwo);
         }
         else if (tmpX == 4 && tmpY == 0)
         {
@@ -657,36 +726,32 @@ public class GameMindScript : MonoBehaviour
             //winValues[24 + i] = sumDiag(board, diags[i]);
 
             var diagOne = (DiagFromPoint(4, 0, false));
-            winValues[28 + 0] = SumDiag(board, diagOne);
+            d.winValues[28 + 0] = SumDiag(board, diagOne);
         }
         else if (tmpX == 5 && tmpY == 1)
         {
             var diagOne = (DiagFromPoint(5, 1, false));
-            winValues[28 + 3] = SumDiag(board, diagOne);
+            d.winValues[28 + 3] = SumDiag(board, diagOne);
         }
         #endregion
-
-
-
-
 
     }
 
     #region Update wins on square rotation
-    static void UpdateRotation(TileVals[,] board, int quad)
+    static void UpdateRotation(TileVals[,] board, int quad, ref GameData d)
     {
         //update horizontal (6)
         //update verticle (6)
         //update diag (4)
         //update one othe diag (1)
-        UpdateHorizontal(board, quad);
-        UpdateVerticle(board, quad);
-        UpdateDiagonal(board, quad);
-        UpdateOther(board, quad);
+        UpdateHorizontal(board, quad, ref d);
+        UpdateVerticle(board, quad, ref d);
+        UpdateDiagonal(board, quad, ref d);
+        UpdateOther(board, quad, ref d);
 
 
     }
-    static void UpdateHorizontal(TileVals[,] board, int quad)
+    static GameData UpdateHorizontal(TileVals[,] board, int quad, ref GameData d)
     {
 
         int additive = (quad < 2) ? 0 : 3;
@@ -699,16 +764,17 @@ public class GameMindScript : MonoBehaviour
             var xSum = Array.ConvertAll(x, value => (int)value).Sum();
             var ySum = Array.ConvertAll(y, value => (int)value).Sum();
 
-            winValues[i * 2] = xSum;
-            winValues[i * 2 + 1] = ySum;
+            d.winValues[i * 2] = xSum;
+            d.winValues[i * 2 + 1] = ySum;
 
             Console.WriteLine("X1: " + xSum);
             Console.WriteLine("X2: " + ySum);
 
         }
+        return d;
 
     }
-    static void UpdateVerticle(TileVals[,] board, int quad)
+    static GameData UpdateVerticle(TileVals[,] board, int quad, ref GameData d)
     {
         int additive = (quad == 0 || quad == 2) ? 0 : 3;
 
@@ -719,15 +785,16 @@ public class GameMindScript : MonoBehaviour
             var xSum = Array.ConvertAll(x, value => (int)value).Sum();
             var ySum = Array.ConvertAll(y, value => (int)value).Sum();
 
-            winValues[12 + i * 2] = xSum;
-            winValues[12 + i * 2 + 1] = ySum;
+            d.winValues[12 + i * 2] = xSum;
+            d.winValues[12 + i * 2 + 1] = ySum;
 
             Console.WriteLine("Y1: " + xSum);
             Console.WriteLine("Y2: " + ySum);
         }
+        return d;
 
     }
-    static void UpdateDiagonal(TileVals[,] board, int quad)
+    static void UpdateDiagonal(TileVals[,] board, int quad, ref GameData d)
     {
         if (quad == 0 || quad == 3)
         {
@@ -738,7 +805,7 @@ public class GameMindScript : MonoBehaviour
             diags[3] = (DiagFromPoint(1, 0, true));
             for (int i = 0; i < 4; i++)
             {
-                winValues[24 + i] = SumDiag(board, diags[i]);
+                d.winValues[24 + i] = SumDiag(board, diags[i]);
             }
 
 
@@ -752,7 +819,7 @@ public class GameMindScript : MonoBehaviour
             diags[3] = (DiagFromPoint(5, 1, false));
             for (int i = 0; i < 4; i++)
             {
-                winValues[28 + i] = SumDiag(board, diags[i]);
+                d.winValues[28 + i] = SumDiag(board, diags[i]);
             }
         }
 
@@ -778,23 +845,23 @@ public class GameMindScript : MonoBehaviour
         }
     }
 
-    static void UpdateOther(TileVals[,] board, int quad)
+    static void UpdateOther(TileVals[,] board, int quad, ref GameData d)
     {
         switch (quad)
         {
             case 0:
-                winValues[28] = SumDiag(board, DiagFromPoint(4, 0, false));
+                d.winValues[28] = SumDiag(board, DiagFromPoint(4, 0, false));
                 break;
             case 1:
-                winValues[24 + 3] = SumDiag(board, DiagFromPoint(1, 0, true));
+                d.winValues[24 + 3] = SumDiag(board, DiagFromPoint(1, 0, true));
 
                 break;
             case 2:
-                winValues[24 + 0] = SumDiag(board, DiagFromPoint(0, 1, true));
+                d.winValues[24 + 0] = SumDiag(board, DiagFromPoint(0, 1, true));
 
                 break;
             case 3:
-                winValues[28 + 3] = SumDiag(board, DiagFromPoint(5, 1, false));
+                d.winValues[28 + 3] = SumDiag(board, DiagFromPoint(5, 1, false));
                 break;
             default:
                 throw new ArgumentException("quad greater than 3");
@@ -904,7 +971,18 @@ public class GameMindScript : MonoBehaviour
 
     static GameMove NNTurn(TileVals[,] gameBoard)
     {
-        return RunPythonThing(gameBoard);
+        try
+        {
+            return RunPythonThing(gameBoard);
+
+        }
+        catch (Exception ex)
+        {
+            UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
+            UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync("SampleScene");
+            exGameError = new Exception(ex.Message + "\nPython Script linked incorrectly or conda not set up");
+            return null;
+        }
 
     }
 
@@ -976,11 +1054,11 @@ public class GameMindScript : MonoBehaviour
         }
         return ret;
     }
-    static int IsGameWon(TileVals[,] board)
+    static int IsGameWon(GameData d)
     {
         bool didXWin = false;
         bool didOWin = false;
-        foreach (var item in winValues)
+        foreach (var item in d.winValues)
         {
             if (item == 50)
             {
@@ -1025,26 +1103,250 @@ public class GameMindScript : MonoBehaviour
     }
 
 
-    static GameMove PentagoHeuristic(TileVals[,] board)
+    public class LookaheadHelper
     {
+        private int min;
+        private int max;
+        private GameMove move;
 
-        for (int i = 0; i < winValues.Length; i++)
+        public LookaheadHelper(int min, int max, GameMove move)
         {
-            if (winValues[i] == 4 || winValues[i] == 40)
-            {
-                var points = PointsFromWinCondition(i);
-                foreach (var item in points)
-                {
-                    if (board[item.Item1, item.Item2] == TileVals.Blank)
-                    {
-                        int quad = GetQuadFromPoint(item.Item1, item.Item2);
-                        return new GameMove(item.Item1, item.Item2, quad, false);
-                    }
+            this.Min = min;
+            this.Max = max;
+            this.Move = move;
+        }
 
+        public int Min
+        {
+            get
+            {
+                return min;
+            }
+
+            set
+            {
+                min = value;
+            }
+        }
+
+        public int Max
+        {
+            get
+            {
+                return max;
+            }
+
+            set
+            {
+                max = value;
+            }
+        }
+
+        public GameMove Move
+        {
+            get
+            {
+                return move;
+            }
+
+            set
+            {
+                move = value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets the best move the cpu could do with lookahead at the player
+    /// </summary>
+    /// <param name="d"></param>
+    /// <returns>The optimal move</returns>
+    static GameMove GetFromLookaheadCPU(GameData d)
+    {
+        d = (GameData) d.Clone();
+        List<LookaheadHelper> possibleMoves = new List<LookaheadHelper>();
+        LookaheadHelper bestMove = new LookaheadHelper(-1, -1, null); ;
+        for (int i = 0; i < 6; i++)
+        {
+            for (int j = 0; j < 6; j++)
+            {
+                if (d.gameBoard[i, j] == TileVals.Blank)
+                {
+                    //for each rotation possible
+                    for (int k = 0; k < 8; k++)
+                    {
+                        if (bestMove.Move == null)
+                        {
+                            GameMove potentialMove = new GameMove(i, j, k / 2, k % 2 == 0);
+
+                            GameData tmp = (GameData) d.Clone();
+                            bestMove.Move = potentialMove;
+                            bestMove.Max = BestXFromWinConditions(tmp, potentialMove);
+                            UpdateWinCondition(potentialMove, ref tmp);
+                            bestMove.Min = BestOFromWinConditions(d, potentialMove);
+
+
+                        }
+                        else
+                        {
+                            LookaheadHelper tempLook = new LookaheadHelper(-1,-1,null);
+
+                            GameMove potentialMove = new GameMove(i, j, k / 2, k % 2 == 0);
+
+                            tempLook.Move = potentialMove;
+
+                            GameData tmp = (GameData)d.Clone();
+
+                            int tmpMax = BestXFromWinConditions(tmp, potentialMove);
+                            UpdateWinCondition(potentialMove, ref tmp);
+                            int tmpMin = BestOFromWinConditions(tmp, potentialMove);
+
+
+                            if(tmpMax >= 5){
+                                return potentialMove;
+                            }
+                           
+                           
+                            if ((tmpMax > bestMove.Max && tmpMin<5) || bestMove.Min >= 5)
+                            {
+                                bestMove = tempLook;
+                            }
+                        }
+
+                    }
                 }
             }
         }
-        int turnCounter = GetTurns().Count / 2;
+
+
+
+        return bestMove.Move; ;
+    }
+
+    //gets the best move that the player could do with no lookahead
+    static LookaheadHelper GetLookaheadPlayer(GameData d, GameMove g)
+    {
+        d = (GameData) d.Clone();
+        UpdateWinCondition(g, ref d);
+
+        LookaheadHelper best = new LookaheadHelper(-1, -1, null);
+        List<TupleList<int, int>> possibleMoves = new List<TupleList<int, int>>();
+        for (int i = 0; i < 6; i++)
+        {
+            for (int j = 0; j < 6; j++)
+            {
+                if (d.gameBoard[i, j] == TileVals.Blank)
+                {
+                    //for each rotation possible
+                    for (int k = 0; k < 8; k++)
+                    {
+                        GameMove potentialMove = new GameMove(i, j, k / 2, k % 2 == 0);
+                        int bestX = BestXFromWinConditions(d, potentialMove);
+                      
+
+                        if (bestX > best.Max)
+                        {
+                            best.Max = bestX;
+                            best.Move = potentialMove;
+                        }
+                    }
+                    possibleMoves.Add(new TupleList<int, int>(i, j));
+                }
+            }
+        }
+        return best;
+    }
+
+    /// <summary>
+    /// Looks at the whole board, applies move, and sees what the greatest win val us
+    /// </summary>
+    /// <param name="d"></param>
+    /// <param name="g"></param>
+    /// <returns></returns>
+    static int BestXFromWinConditions(GameData d, GameMove g)
+    {
+        d = (GameData)d.Clone();
+
+        UpdateWinCondition(g, ref d);
+
+        //x is 1s
+        int max = -1;
+        for (int i = 0; i < d.winValues.Length; i++)
+        {
+
+
+            int x = d.winValues[i];
+            int Os = x / 10;
+            int Xs = x % 10;
+            //if a better win condition
+            if (Os == 0 && Xs > max)
+            {
+                max = Xs;
+            }
+        }
+
+
+        return max;
+    }
+    static int BestOFromWinConditions(GameData d, GameMove g)
+    {
+        d = (GameData)d.Clone();
+
+        UpdateWinCondition(g, ref d);
+
+        //x is 1s
+        int max = -1;
+        for (int i = 0; i < d.winValues.Length; i++)
+        {
+
+
+            int x = d.winValues[i];
+            int Os = x / 10;
+            int Xs = x % 10;
+            //if a better win condition
+            if (Xs == 0 && Os > max)
+            {
+                max = Os;
+            }
+        }
+
+
+        return max;
+    }
+
+    static MyTuple<int, int> GetMin(TileVals[,] board)
+    {
+        int max = -1;
+        int min = -1;
+
+        return new MyTuple<int, int>(min, max);
+    }
+
+
+    static GameMove PentagoHeuristic(GameData d)
+    {
+
+        d = (GameData)d.Clone();
+
+
+        for (int i = 0; i < d.winValues.Length; i++)
+        {
+            if (d.winValues[i] == 4 || d.winValues[i] == 40)
+            {
+                return GetFromLookaheadCPU(currentGameData);
+                //var points = PointsFromWinCondition(i);
+                //foreach (var item in points)
+                //{
+                //    if (d.gameBoard[item.Item1, item.Item2] == TileVals.Blank)
+                //    {
+                //        //int quad = GetQuadFromPoint(item.Item1, item.Item2);
+                //        //return new GameMove(item.Item1, item.Item2, quad, false);
+                //    }
+
+                //}
+            }
+        }
+        int turnCounter = GetTurns(d).Count / 2;
         turnCounter++;
         GameMove ret = new GameMove();
         ret.rotIndex = -1;
@@ -1096,11 +1398,11 @@ public class GameMindScript : MonoBehaviour
         {
             if (startQuadrant == 0)
             {
-                if ((int)board[2, 0] == 0)
+                if ((int)d.gameBoard[2, 0] == 0)
                 {
                     ret = new GameMove(2, 0, 3, true);
                 }
-                else if ((int)board[0, 2] == 0)
+                else if ((int)d.gameBoard[0, 2] == 0)
                 {
                     ret = new GameMove(0, 2, 3, true);
                 }
@@ -1111,11 +1413,11 @@ public class GameMindScript : MonoBehaviour
             }
             if (startQuadrant == 1)
             {
-                if ((int)board[3, 0] == 0)
+                if ((int)d.gameBoard[3, 0] == 0)
                 {
                     ret = new GameMove(3, 0, 0, true);
                 }
-                else if ((int)board[5, 2] == 0)
+                else if ((int)d.gameBoard[5, 2] == 0)
                 {
                     ret = new GameMove(5, 2, 2, true);
                 }
@@ -1126,11 +1428,11 @@ public class GameMindScript : MonoBehaviour
             }
             if (startQuadrant == 2)
             {
-                if ((int)board[2, 5] == 0)
+                if ((int)d.gameBoard[2, 5] == 0)
                 {
                     ret = new GameMove(2, 5, 1, true);
                 }
-                else if ((int)board[0, 3] == 0)
+                else if ((int)d.gameBoard[0, 3] == 0)
                 {
                     ret = new GameMove(0, 3, 1, true);
                 }
@@ -1141,11 +1443,11 @@ public class GameMindScript : MonoBehaviour
             }
             if (startQuadrant == 3)
             {
-                if ((int)board[3, 5] == 0)
+                if ((int)d.gameBoard[3, 5] == 0)
                 {
                     ret = new GameMove(3, 5, 0, true);
                 }
-                else if ((int)board[5, 3] == 0)
+                else if ((int)d.gameBoard[5, 3] == 0)
                 {
                     ret = new GameMove(5, 3, 0, true);
                 }
@@ -1160,21 +1462,21 @@ public class GameMindScript : MonoBehaviour
         {
             if (startQuadrant == 0)
             {
-                if ((int)board[0, 0] == 0)
+                if ((int)d.gameBoard[0, 0] == 0)
                 {
                     /*
                     xVal = 0;
                     yVal = 0;
-                    RotateSquare(board, 1, true);
+                    RotateSquare(d.gameBoard, 1, true);
                     */
                     ret = new GameMove(0, 0, 1, true);
                 }
-                else if ((int)board[0, 2] == 0)
+                else if ((int)d.gameBoard[0, 2] == 0)
                 {
                     /*
                     xVal = 0;
                     yVal = 2;
-                    RotateSquare(board, 1, true);
+                    RotateSquare(d.gameBoard, 1, true);
                     */
                     ret = new GameMove(0, 2, 1, true);
                 }
@@ -1183,28 +1485,28 @@ public class GameMindScript : MonoBehaviour
                     /*
                     xVal = 0;
                     yVal = 5;
-                    RotateSquare(board, 2, true);
+                    RotateSquare(d.gameBoard, 2, true);
                     */
                     ret = new GameMove(0, 5, 2, true);
                 }
             }
             if (startQuadrant == 1)
             {
-                if ((int)board[5, 0] == 0)
+                if ((int)d.gameBoard[5, 0] == 0)
                 {
                     /*
                     xVal = 5;
                     yVal = 0;
-                    RotateSquare(board, 2, true);
+                    RotateSquare(d.gameBoard, 2, true);
                     */
                     ret = new GameMove(5, 0, 2, true);
                 }
-                else if ((int)board[5, 2] == 0)
+                else if ((int)d.gameBoard[5, 2] == 0)
                 {
                     /*
                     xVal = 5;
                     yVal = 2;
-                    RotateSquare(board, 2, true);
+                    RotateSquare(d.gameBoard, 2, true);
                     */
                     ret = new GameMove(5, 2, 2, true);
                 }
@@ -1213,28 +1515,28 @@ public class GameMindScript : MonoBehaviour
                     /*
                     xVal = 5;
                     yVal = 5;
-                    RotateSquare(board, 3, false);
+                    RotateSquare(d.gameBoard, 3, false);
                     */
                     ret = new GameMove(5, 5, 3, false);
                 }
             }
             if (startQuadrant == 2)
             {
-                if ((int)board[0, 5] == 0)
+                if ((int)d.gameBoard[0, 5] == 0)
                 {
                     /*
                     xVal = 0;
                     yVal = 5;
-                    RotateSquare(board, 1, true);
+                    RotateSquare(d.gameBoard, 1, true);
                     */
                     ret = new GameMove(0, 5, 1, true);
                 }
-                else if ((int)board[0, 3] == 0)
+                else if ((int)d.gameBoard[0, 3] == 0)
                 {
                     /*
                     xVal = 5;
                     yVal = 2;
-                    RotateSquare(board, 1, true);
+                    RotateSquare(d.gameBoard, 1, true);
                     */
                     ret = new GameMove(5, 2, 1, true);
                 }
@@ -1243,28 +1545,28 @@ public class GameMindScript : MonoBehaviour
                     /*
                     xVal = 0;
                     yVal = 0;
-                    RotateSquare(board, 0, false);
+                    RotateSquare(d.gameBoard, 0, false);
                     */
                     ret = new GameMove(0, 0, 0, false);
                 }
             }
             if (startQuadrant == 3)
             {
-                if ((int)board[5, 5] == 0)
+                if ((int)d.gameBoard[5, 5] == 0)
                 {
                     /*
                     xVal = 5;
                     yVal = 5;
-                    RotateSquare(board, 2, true);
+                    RotateSquare(d.gameBoard, 2, true);
                     */
                     ret = new GameMove(5, 5, 2, true);
                 }
-                else if ((int)board[5, 3] == 0)
+                else if ((int)d.gameBoard[5, 3] == 0)
                 {
                     /*
                     xVal = 5;
                     yVal = 2;
-                    RotateSquare(board, 2, true);
+                    RotateSquare(d.gameBoard, 2, true);
                     */
                     ret = new GameMove(5, 2, 2, true);
                 }
@@ -1273,7 +1575,7 @@ public class GameMindScript : MonoBehaviour
                     /*
                     xVal = 5;
                     yVal = 0;
-                    RotateSquare(board, 3, true);
+                    RotateSquare(d.gameBoard, 3, true);
                     */
                     ret = new GameMove(5, 0, 3, true);
                 }
@@ -1287,41 +1589,41 @@ public class GameMindScript : MonoBehaviour
             {
                 //FIRST HALF OF DIAGONAL EDGE CASES
                 //directly through the middle cases
-                if ((int)board[3, 2] + (int)board[2, 3] == 20)
+                if ((int)d.gameBoard[3, 2] + (int)d.gameBoard[2, 3] == 20)
                 {
-                    if ((int)board[4, 1] == 10)
+                    if ((int)d.gameBoard[4, 1] == 10)
                     {
                         /*
                         xVal = 1;
                         yVal = 4;
-                        RotateSquare(board, 2, true);
+                        RotateSquare(d.gameBoard, 2, true);
                         */
                         ret = new GameMove(1, 4, 2, true);
                     }
-                    else if ((int)board[1, 4] == 10)
+                    else if ((int)d.gameBoard[1, 4] == 10)
                     {
                         /*
                         xVal = 4;
                         yVal = 1;
-                        RotateSquare(board, 1, true);
+                        RotateSquare(d.gameBoard, 1, true);
                         */
                         ret = new GameMove(4, 1, 1, true);
                     }
-                    else if ((int)board[1, 4] + (int)board[2, 3] == 20)
+                    else if ((int)d.gameBoard[1, 4] + (int)d.gameBoard[2, 3] == 20)
                     {
                         /*
                          xVal = 3;
                          yVal = 2;
-                         RotateSquare(board, 2, true);                        
+                         RotateSquare(d.gameBoard, 2, true);                        
                          */
                         ret = new GameMove(3, 2, 2, true);
                     }
-                    else if ((int)board[4, 1] + (int)board[3, 2] == 20)
+                    else if ((int)d.gameBoard[4, 1] + (int)d.gameBoard[3, 2] == 20)
                     {
                         /*
                          xVal = 2;
                          yVal = 3;
-                         RotateSquare(board, 1, true);                        
+                         RotateSquare(d.gameBoard, 1, true);                        
                          */
                         ret = new GameMove(2, 3, 1, true);
                     }
@@ -1331,20 +1633,20 @@ public class GameMindScript : MonoBehaviour
                     if (startQuadrant == 0)
                     {
                         int[] arr = { 0, 1, 4, 5, 12, 13, 16, 17 };
-                        int min = winValues[arr[0]];
+                        int min = d.winValues[arr[0]];
                         for (int i = 0; i < arr.Length; i++)
                         {
-                            if (winValues[arr[i]] < min)
+                            if (d.winValues[arr[i]] < min)
                             {
-                                min = winValues[arr[i]];
+                                min = d.winValues[arr[i]];
                             }
-                            fourthTurnPoint.Add(PointsFromWinCondition(winValues[arr[i]]));
+                            fourthTurnPoint.Add(PointsFromWinCondition(d.winValues[arr[i]]));
                         }
                         foreach (var pointArr in fourthTurnPoint)
                         {
                             foreach (var point in pointArr)
                             {
-                                if (board[point.Item1, point.Item2] != TileVals.Blank)
+                                if (d.gameBoard[point.Item1, point.Item2] != TileVals.Blank)
                                 {
                                     continue;
                                 }
@@ -1355,20 +1657,20 @@ public class GameMindScript : MonoBehaviour
                     else
                     {
                         int[] arr = { 6, 7, 10, 11, 18, 19, 22, 23 };
-                        int min = winValues[arr[0]];
+                        int min = d.winValues[arr[0]];
                         for (int i = 0; i < arr.Length; i++)
                         {
-                            if (winValues[arr[i]] < min)
+                            if (d.winValues[arr[i]] < min)
                             {
-                                min = winValues[arr[i]];
+                                min = d.winValues[arr[i]];
                             }
-                            fourthTurnPoint.Add(PointsFromWinCondition(winValues[arr[i]]));
+                            fourthTurnPoint.Add(PointsFromWinCondition(d.winValues[arr[i]]));
                         }
                         foreach (var pointArr in fourthTurnPoint)
                         {
                             foreach (var point in pointArr)
                             {
-                                if (board[point.Item1, point.Item2] != TileVals.Blank)
+                                if (d.gameBoard[point.Item1, point.Item2] != TileVals.Blank)
                                 {
                                     continue;
                                 }
@@ -1382,41 +1684,41 @@ public class GameMindScript : MonoBehaviour
             {
                 //SECOND HALF OF DIAGONAL EDGE CASES
                 //directly through the middle cases
-                if ((int)board[2, 2] + (int)board[3, 3] == 20)
+                if ((int)d.gameBoard[2, 2] + (int)d.gameBoard[3, 3] == 20)
                 {
-                    if ((int)board[4, 4] == 10)
+                    if ((int)d.gameBoard[4, 4] == 10)
                     {
                         /*
                         xVal = 1;
                         yVal = 1;
-                        RotateSquare(board, 0, true);
+                        RotateSquare(d.gameBoard, 0, true);
                         */
                         ret = new GameMove(1, 1, 0, true);
                     }
-                    else if ((int)board[1, 1] == 10)
+                    else if ((int)d.gameBoard[1, 1] == 10)
                     {
                         /*
                         xVal = 4;
                         yVal = 4;
-                        RotateSquare(board, 3, true);
+                        RotateSquare(d.gameBoard, 3, true);
                         */
                         ret = new GameMove(4, 4, 3, true);
                     }
-                    else if ((int)board[1, 1] + (int)board[2, 2] == 20)
+                    else if ((int)d.gameBoard[1, 1] + (int)d.gameBoard[2, 2] == 20)
                     {
                         /*
                          xVal = 3;
                          yVal = 3;
-                         RotateSquare(board, 2, true);                        
+                         RotateSquare(d.gameBoard, 2, true);                        
                          */
                         ret = new GameMove(3, 3, 3, true);
                     }
-                    else if ((int)board[3, 3] + (int)board[4, 4] == 20)
+                    else if ((int)d.gameBoard[3, 3] + (int)d.gameBoard[4, 4] == 20)
                     {
                         /*
                          xVal = 2;
                          yVal = 2;
-                         RotateSquare(board, 0, true);                        
+                         RotateSquare(d.gameBoard, 0, true);                        
                          */
                         ret = new GameMove(2, 2, 0, true);
                     }
@@ -1427,20 +1729,20 @@ public class GameMindScript : MonoBehaviour
                     if (startQuadrant == 1)
                     {
                         int[] arr = { 0, 1, 4, 5, 18, 19, 22, 23 };
-                        int min = winValues[arr[0]];
+                        int min = d.winValues[arr[0]];
                         for (int i = 0; i < arr.Length; i++)
                         {
-                            if (winValues[arr[i]] < min)
+                            if (d.winValues[arr[i]] < min)
                             {
-                                min = winValues[arr[i]];
+                                min = d.winValues[arr[i]];
                             }
-                            fourthTurnPoint.Add(PointsFromWinCondition(winValues[arr[i]]));
+                            fourthTurnPoint.Add(PointsFromWinCondition(d.winValues[arr[i]]));
                         }
                         foreach (var pointArr in fourthTurnPoint)
                         {
                             foreach (var point in pointArr)
                             {
-                                if (board[point.Item1, point.Item2] != TileVals.Blank)
+                                if (d.gameBoard[point.Item1, point.Item2] != TileVals.Blank)
                                 {
                                     continue;
                                 }
@@ -1451,20 +1753,20 @@ public class GameMindScript : MonoBehaviour
                     else
                     {
                         int[] arr = { 6, 7, 10, 11, 12, 13, 16, 17 };
-                        int min = winValues[arr[0]];
+                        int min = d.winValues[arr[0]];
                         for (int i = 0; i < arr.Length; i++)
                         {
-                            if (winValues[arr[i]] < min)
+                            if (d.winValues[arr[i]] < min)
                             {
-                                min = winValues[arr[i]];
+                                min = d.winValues[arr[i]];
                             }
-                            fourthTurnPoint.Add(PointsFromWinCondition(winValues[arr[i]]));
+                            fourthTurnPoint.Add(PointsFromWinCondition(d.winValues[arr[i]]));
                         }
                         foreach (var pointArr in fourthTurnPoint)
                         {
                             foreach (var point in pointArr)
                             {
-                                if (board[point.Item1, point.Item2] != TileVals.Blank)
+                                if (d.gameBoard[point.Item1, point.Item2] != TileVals.Blank)
                                 {
                                     continue;
                                 }
@@ -1475,6 +1777,7 @@ public class GameMindScript : MonoBehaviour
                 }
             }
         }
+
         else
         {
 
@@ -1482,91 +1785,51 @@ public class GameMindScript : MonoBehaviour
 
 
             int[,] zerothQuad = { { 2, 0 }, { 2, 1 }, { 2, 2 }, { 1, 2 }, { 0, 2 } };
-            int zerothInt = GetSumFromPoints(board, zerothQuad);
+            int zerothInt = GetSumFromPoints(d.gameBoard, zerothQuad);
             int[,] firstQuad = { { 3, 0 }, { 3, 1 }, { 3, 2 }, { 4, 2 }, { 5, 2 } };
-            int firstInt = GetSumFromPoints(board, firstQuad);
+            int firstInt = GetSumFromPoints(d.gameBoard, firstQuad);
             int[,] secondQuad = { { 0, 3 }, { 1, 3 }, { 2, 3 }, { 2, 4 }, { 2, 5 } };
-            int secondInt = GetSumFromPoints(board, secondQuad);
+            int secondInt = GetSumFromPoints(d.gameBoard, secondQuad);
             int[,] thirdQuad = { { 5, 5 }, { 4, 5 }, { 3, 5 }, { 3, 4 }, { 3, 3 } };
-            int thirdInt = GetSumFromPoints(board, thirdQuad);
+            int thirdInt = GetSumFromPoints(d.gameBoard, thirdQuad);
             if (turnCounter < 11)
             {
-                if (4 < turnCounter && turnCounter < 11)
-                {
-                    List<TupleList<int, int>> possibleWinPoints = new List<TupleList<int, int>>();
-                    for (int i = 0; i < winValues.Length; i++)
-                    {
-                        if ((winValues[i] > 1 && winValues[i] < 5) || (winValues[i] > 11 && winValues[i] < 15))
-                        {
-                            possibleWinPoints.Add(PointsFromWinCondition(i));
 
-                        }
-                    }
-                    foreach (var pointArr in possibleWinPoints)
-                    {
-                        foreach (var point in pointArr)
-                        {
-                            if (board[point.Item1, point.Item2] != TileVals.Blank)
-                            {
-                                continue;
-                            }
-                            if (((-1 < point.Item1 && point.Item1 < 3) && (-1 < point.Item2 && point.Item2 < 3)) || ((2 < point.Item1 && point.Item1 < 6) && (2 < point.Item2 && point.Item2 < 6)))
-                            {
-                                if (firstInt < secondInt)
-                                {
-                                    ret = new GameMove(point.Item1, point.Item2, 1, false);
-                                }
-                                else
-                                {
-                                    ret = new GameMove(point.Item1, point.Item2, 2, false);
-                                }
-                            }
-                            else if (((2 < point.Item1 && point.Item1 < 6) && (-1 < point.Item2 && point.Item2 < 3)) || ((-1 < point.Item1 && point.Item1 < 3) && (2 < point.Item2 && point.Item2 < 6)))
-                            {
-                                if (zerothInt < thirdInt)
-                                {
-                                    ret = new GameMove(point.Item1, point.Item2, 0, false);
-                                }
-                                else
-                                {
-                                    ret = new GameMove(point.Item1, point.Item2, 3, false);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            //LATE GAME
-            else
-            {
                 List<TupleList<int, int>> possibleWinPoints = new List<TupleList<int, int>>();
-                for (int i = 0; i < winValues.Length; i++)
+                for (int i = 0; i < d.winValues.Length; i++)
                 {
-                    if (winValues[i] >= 23)
+                    if ((d.winValues[i] > 1 && d.winValues[i] < 5) || (d.winValues[i] > 11 && d.winValues[i] < 15))
                     {
                         possibleWinPoints.Add(PointsFromWinCondition(i));
+
                     }
                 }
                 foreach (var pointArr in possibleWinPoints)
                 {
                     foreach (var point in pointArr)
                     {
-
-                        if (((-1 < point.Item1 && point.Item1 < 3) && (-1 < point.Item2 && point.Item2 < 3)) || ((2 < point.Item1 && point.Item1 < 6) && (2 < point.Item2 && point.Item2 < 6)))
+                        if (d.gameBoard[point.Item1, point.Item2] != TileVals.Blank)
                         {
-                            if (firstInt > secondInt)
+                            continue;
+                        }
+                        if (
+                            ((-1 < point.Item1 && point.Item1 < 3) && (-1 < point.Item2 && point.Item2 < 3))
+                         || ((2 < point.Item1 && point.Item1 < 6) && (2 < point.Item2 && point.Item2 < 6)))
+                        {
+                            if (firstInt < secondInt)
                             {
-                                ret = new GameMove(point.Item1, point.Item2, 1, true);
+                                ret = new GameMove(point.Item1, point.Item2, 1, false);
                             }
                             else
                             {
                                 ret = new GameMove(point.Item1, point.Item2, 2, false);
                             }
                         }
-                        else if (((2 < point.Item1 && point.Item1 < 6) && (-1 < point.Item2 && point.Item2 < 3)) || ((-1 < point.Item1 && point.Item1 < 3) && (2 < point.Item2 && point.Item2 < 6)))
+                        else if (
+                               ((2 < point.Item1 && point.Item1 < 6) && (-1 < point.Item2 && point.Item2 < 3))
+                            || ((-1 < point.Item1 && point.Item1 < 3) && (2 < point.Item2 && point.Item2 < 6)))
                         {
-
-                            if (zerothInt > thirdInt)
+                            if (zerothInt < thirdInt)
                             {
                                 ret = new GameMove(point.Item1, point.Item2, 0, false);
                             }
@@ -1577,6 +1840,57 @@ public class GameMindScript : MonoBehaviour
                         }
                     }
                 }
+
+            }
+            //LATE GAME
+            else
+            {
+                ret = GetFromLookaheadCPU(currentGameData);
+
+                //List<TupleList<int, int>> possibleWinPoints = new List<TupleList<int, int>>();
+                //for (int i = 0; i < d.winValues.Length; i++)
+                //{
+                //    if (d.winValues[i] >= 23)
+                //    {
+                //        possibleWinPoints.Add(PointsFromWinCondition(i));
+                //    }
+                //}
+                ////for each possible win condition
+                //foreach (var pointArr in possibleWinPoints)
+                //{
+                //    foreach (var point in pointArr)
+                //    {
+
+                //        if (
+                //               ((-1 < point.Item1 && point.Item1 < 3) && (-1 < point.Item2 && point.Item2 < 3))
+                //            || ((2 < point.Item1 && point.Item1 < 6) && (2 < point.Item2 && point.Item2 < 6))
+                //            )
+                //        {
+                //            if (firstInt > secondInt)
+                //            {
+                //                ret = new GameMove(point.Item1, point.Item2, 1, true);
+                //            }
+                //            else
+                //            {
+                //                ret = new GameMove(point.Item1, point.Item2, 2, false);
+                //            }
+                //        }
+                //        else if (
+                //               ((2 < point.Item1 && point.Item1 < 6) && (-1 < point.Item2 && point.Item2 < 3))
+                //            || ((-1 < point.Item1 && point.Item1 < 3) && (2 < point.Item2 && point.Item2 < 6)))
+                //        {
+
+                //            if (zerothInt > thirdInt)
+                //            {
+                //                ret = new GameMove(point.Item1, point.Item2, 0, false);
+                //            }
+                //            else
+                //            {
+                //                ret = new GameMove(point.Item1, point.Item2, 3, false);
+                //            }
+                //        }
+                //    }
+                //}
             }
             if (ret.rotIndex == -1)
             {
@@ -1584,7 +1898,7 @@ public class GameMindScript : MonoBehaviour
             }
 
         }
-        if (board[ret.xCord, ret.yCord] != TileVals.Blank)
+        if (d.gameBoard[ret.xCord, ret.yCord] != TileVals.Blank)
         {
             throw new Exception("The AI overwrote a user tile...");
         }
@@ -1592,12 +1906,13 @@ public class GameMindScript : MonoBehaviour
     }
 
 
-    enum TileVals
+    public enum TileVals
     {
         X = 1,
         O = 10,
         Blank = 0
     }
+
 
     public static string Run(string cmd)
     {
@@ -1625,10 +1940,13 @@ public class GameMindScript : MonoBehaviour
 
     static GameMove RunPythonThing(TileVals[,] board)
     {
-        var dir = "/Users/connorgoldsmith/Documents/Git/pentago-ai/4444\\ AI\\ Proj";
+        var dir = PlayerPrefs.GetString("dir").Replace(" ", "\\ ");
+        var pyFile = PlayerPrefs.GetString("file");
+
+        //var dir = "/Users/connorgoldsmith/Documents/Git/pentago-ai/4444\\ AI\\ Proj";
         var cmdSetup = "cd " + dir;
         var condaEnvSetup = "conda activate tensorflow_env";
-        var pyFile = "single_move.py";
+        //var pyFile = "single_move.py";
         var gameboardString = EnumArrToNNArr(board);
 
         var lineCmd = string.Format("python {0} {1}", pyFile, gameboardString);
@@ -1717,7 +2035,9 @@ public class CustomArray<T>
         var colVector = new T[colLength];
 
         for (var i = 0; i < colLength; i++)
+        {
             colVector[i] = matrix[columnNumber, i];
+        }
 
         return colVector;
     }
@@ -1731,7 +2051,9 @@ public class CustomArray<T>
         var rowVector = new T[rowLength];
 
         for (var i = 0; i < rowLength; i++)
+        {
             rowVector[i] = matrix[i, rowNumber];
+        }
 
         return rowVector;
     }
@@ -1746,7 +2068,9 @@ public class CustomArray<T>
         var colVector = new T[colLength];
 
         for (var i = 0; i < colLength; i++)
+        {
             colVector[i] = matrix[columnNumber, i + 1];
+        }
 
         return colVector;
     }
@@ -1760,7 +2084,9 @@ public class CustomArray<T>
         var rowVector = new T[rowLength];
 
         for (var i = 0; i < rowLength; i++)
+        {
             rowVector[i] = matrix[i + 1, rowNumber];
+        }
 
         return rowVector;
     }
@@ -1824,7 +2150,7 @@ public class MyTuple<T1, T2>
     }
 }
 
-public class GameMove
+public class GameMove : ICloneable
 {
     public int xCord;
     public int yCord;
@@ -1844,7 +2170,19 @@ public class GameMove
     }
 
 
+    public object Clone()
 
+    {
+        return new GameMove(this.xCord, this.yCord, this.rotIndex, this.rotLeft);
+    }
+
+    }
+static class Extensions
+{
+    public static IList<T> Clone<T>(this IList<T> listToClone) where T : ICloneable
+    {
+        return listToClone.Select(item => (T)item.Clone()).ToList();
+    }
 }
 
 

@@ -7,8 +7,16 @@ public class MarbleScript : MonoBehaviour {
     public float smoothing = 1f;
     public Transform target;
 
+
     void Start()
     {
+     
+        PlayPlacement();
+    }
+
+    public void PlayPlacement()
+    {
+        GetComponent<AudioSource>().Play();
     }
 
     float timer = 2f;
