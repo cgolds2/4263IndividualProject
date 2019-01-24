@@ -28,4 +28,16 @@ public class MenuScript : MonoBehaviour {
     {
 
     }
+    private void OnGUI()
+    {
+        if(GameMindScript.exGameError != null){
+            if (GUI.Button(new Rect(5 , 5 , Screen.width -10, Screen.height -10), GameMindScript.exGameError.Message))
+            {
+                GameMindScript.exGameError = null;
+
+
+            }
+        }
+      
+    }
 }

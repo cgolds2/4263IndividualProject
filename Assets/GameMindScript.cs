@@ -25,6 +25,7 @@ public class GameMindScript : MonoBehaviour
     static int startQuadrant = -1;
     private static GameState stateOfGame = GameState.NotTurn;
     static GameWinner whoWon = 0;
+    public static Exception exGameError;
 
 
 
@@ -970,7 +971,18 @@ public class GameMindScript : MonoBehaviour
 
     static GameMove NNTurn(TileVals[,] gameBoard)
     {
-        return RunPythonThing(gameBoard);
+        try
+        {
+            return RunPythonThing(gameBoard);
+
+        }
+        catch (Exception ex)
+        {
+            UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
+            UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync("SampleScene");
+            exGameError = new Exception(ex.Message + "\nPython Script linked incorrectly or conda not set up");
+            return null;
+        }
 
     }
 
